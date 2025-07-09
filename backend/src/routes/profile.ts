@@ -5,11 +5,14 @@ import {
     addExperience,
     deleteEducation,
     deleteExperience,
+    deleteProfileImages,
     getProfile,
+    getProfileImages,
     updateEducation,
     updateExperience,
     updateProfile,
     updateSkills,
+    uploadProfileImages,
 } from '../controllers/profileController';
 import { authenticate } from '../middleware/auth';
 
@@ -80,6 +83,32 @@ const educationValidation = [
     .withMessage('Graduation date must be a valid date'),
 ];
 
+// Image validation
+const imageValidation = [
+  body('leftImage')
+    .optional()
+    .isString()
+    .custom((value) => {
+      if (value && !value.startsWith('data:image/')) {
+        throw new Error('Left image must be a valid base64 image data URL');
+      }
+      return true;
+    }),
+  body('rightImage')
+    .optional()
+    .isString()
+    .custom((value) => {
+      if (value && !value.startsWith('data:image/')) {
+        throw new Error('Right image must be a valid base64 image data URL');
+      }
+      return true;
+    }),
+  body('metadata')
+    .optional()
+    .isObject()
+    .withMessage('Metadata must be an object'),
+];
+
 // Routes
 router.get('/', getProfile);
 router.put('/', profileValidation, updateProfile);
@@ -96,5 +125,10 @@ router.delete('/education/:id', param('id').isMongoId(), deleteEducation);
 
 // Skills routes
 router.put('/skills', body('skills').isArray().withMessage('Skills must be an array'), updateSkills);
+
+// Image routes
+router.post('/images', imageValidation, uploadProfileImages);
+router.get('/images', getProfileImages);
+router.delete('/images', deleteProfileImages);
 
 export default router;

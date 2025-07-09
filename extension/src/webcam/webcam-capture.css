@@ -1,0 +1,487 @@
+/* Webcam Capture Styles */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #333;
+}
+
+.webcam-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Header */
+.webcam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Main Content */
+.webcam-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  grid-template-areas: 
+    "camera capture"
+    "preview preview"
+    "save save";
+}
+
+@media (max-width: 768px) {
+  .webcam-main {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "camera"
+      "capture"
+      "preview"
+      "save";
+  }
+}
+
+/* Camera Section */
+.camera-section {
+  grid-area: camera;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.camera-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#webcam-video {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  border-radius: 8px;
+  background: #000;
+  margin: 0 auto;
+  display: block;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.camera-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.setting-group label {
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.form-select {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Capture Section */
+.capture-section {
+  grid-area: capture;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.capture-instructions {
+  margin-bottom: 20px;
+}
+
+.capture-instructions h2 {
+  color: #2d3748;
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+}
+
+.capture-instructions p {
+  color: #4a5568;
+  margin-bottom: 10px;
+}
+
+.capture-instructions ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.capture-instructions li {
+  padding: 5px 0;
+  color: #4a5568;
+}
+
+.capture-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.btn-capture {
+  padding: 15px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-left {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+}
+
+.btn-right {
+  background: linear-gradient(45deg, #f093fb, #f5576c);
+  color: white;
+}
+
+/* Countdown Display */
+.countdown-display {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  z-index: 1000;
+}
+
+.countdown-number {
+  font-size: 4rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  animation: pulse 1s infinite;
+}
+
+.countdown-text {
+  font-size: 1.2rem;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Preview Section */
+.preview-section {
+  grid-area: preview;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.preview-section h2 {
+  color: #2d3748;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.image-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.image-preview h3 {
+  color: #4a5568;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.preview-container {
+  position: relative;
+  border: 2px dashed #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s;
+}
+
+.preview-container:hover {
+  border-color: #cbd5e0;
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #a0aec0;
+}
+
+.preview-placeholder .icon {
+  font-size: 2rem;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-actions {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+/* Save Section */
+.save-section {
+  grid-area: save;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.save-section h2 {
+  color: #2d3748;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.save-options {
+  margin-bottom: 20px;
+}
+
+.option-group {
+  margin-bottom: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.save-controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-success {
+  background: linear-gradient(45deg, #48bb78, #38a169);
+  color: white;
+}
+
+.btn-danger {
+  background: linear-gradient(45deg, #f56565, #e53e3e);
+  color: white;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Status Messages */
+.status-messages {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.status-message {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #667eea;
+  animation: slideIn 0.3s ease;
+}
+
+.status-message.success {
+  border-left-color: #48bb78;
+}
+
+.status-message.error {
+  border-left-color: #f56565;
+}
+
+.status-message.warning {
+  border-left-color: #ed8936;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .webcam-container {
+    padding: 10px;
+  }
+  
+  .webcam-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .capture-controls {
+    gap: 10px;
+  }
+  
+  .save-controls {
+    flex-direction: column;
+  }
+  
+  .image-previews {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
 import aiService from '../services/aiService';
+import cacheService, { hashContent } from '../services/cacheService';
 import { IApiResponse, IAuthRequest, ICoverLetterRequest } from '../types';
 
 // @desc    Analyze job posting
@@ -22,7 +23,20 @@ export const analyzeJob = async (req: IAuthRequest, res: Response): Promise<void
 
     const { jobTitle, jobDescription, companyName } = req.body;
 
-    const analysis = await aiService.analyzeJob(jobTitle, jobDescription, companyName);
+    // Create cache key for job analysis
+    const jobContent = `${jobTitle}-${jobDescription}-${companyName}`;
+    const jobHash = hashContent(jobContent);
+    
+    // Check cache first
+    let analysis = cacheService.getJobAnalysis(jobHash);
+    
+    if (!analysis) {
+      // Perform analysis if not in cache
+      analysis = await aiService.analyzeJob(jobTitle, jobDescription, companyName);
+      
+      // Cache the result for 1 hour
+      cacheService.setJobAnalysis(jobHash, analysis, 3600);
+    }
 
     // Calculate match score based on user profile
     let matchScore = 0;
@@ -47,6 +61,7 @@ export const analyzeJob = async (req: IAuthRequest, res: Response): Promise<void
       data: {
         ...analysis,
         matchScore,
+        cached: !!cacheService.getJobAnalysis(jobHash),
       },
     };
 

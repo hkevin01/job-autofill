@@ -7,7 +7,8 @@
     "activeTab",
     "storage",
     "scripting",
-    "tabs"
+    "tabs",
+    "camera"
   ],
   "host_permissions": [
     "https://*/*",

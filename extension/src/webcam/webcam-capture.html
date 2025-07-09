@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job AutoFill - Webcam Capture</title>
+  <link rel="stylesheet" href="webcam-capture.css">
+</head>
+<body>
+  <div class="webcam-container">
+    <header class="webcam-header">
+      <div class="logo">
+        <img src="../assets/icons/icon32.png" alt="Job AutoFill" class="logo-icon">
+        <h1 class="title">Webcam Capture</h1>
+      </div>
+      <button class="btn btn-secondary" id="back-btn">← Back to Main</button>
+    </header>
+
+    <main class="webcam-main">
+      <!-- Camera Section -->
+      <section class="camera-section">
+        <div class="camera-container">
+          <video id="webcam-video" autoplay playsinline></video>
+          <canvas id="capture-canvas" style="display: none;"></canvas>
+          
+          <!-- Camera Controls -->
+          <div class="camera-controls">
+            <button class="btn btn-primary" id="start-camera-btn">
+              <span class="icon">📷</span>
+              Start Camera
+            </button>
+            <button class="btn btn-secondary" id="stop-camera-btn" style="display: none;">
+              <span class="icon">⏹️</span>
+              Stop Camera
+            </button>
+          </div>
+
+          <!-- Camera Settings -->
+          <div class="camera-settings">
+            <div class="setting-group">
+              <label for="camera-select">Camera:</label>
+              <select id="camera-select" class="form-select">
+                <option value="">Select Camera...</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label for="resolution-select">Resolution:</label>
+              <select id="resolution-select" class="form-select">
+                <option value="640x480">640x480</option>
+                <option value="1280x720" selected>1280x720 (HD)</option>
+                <option value="1920x1080">1920x1080 (Full HD)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Capture Controls -->
+      <section class="capture-section">
+        <div class="capture-instructions">
+          <h2>Capture Instructions</h2>
+          <p>Position yourself in the camera view and capture profile images:</p>
+          <ul>
+            <li><strong>Left Image:</strong> Face turned slightly left (your right profile)</li>
+            <li><strong>Right Image:</strong> Face turned slightly right (your left profile)</li>
+          </ul>
+        </div>
+
+        <div class="capture-controls">
+          <button class="btn btn-capture btn-left" id="capture-left-btn" disabled>
+            <span class="icon">📸</span>
+            Capture Left Image
+          </button>
+          <button class="btn btn-capture btn-right" id="capture-right-btn" disabled>
+            <span class="icon">📸</span>
+            Capture Right Image
+          </button>
+        </div>
+
+        <!-- Countdown Display -->
+        <div class="countdown-display" id="countdown-display" style="display: none;">
+          <div class="countdown-number" id="countdown-number">3</div>
+          <div class="countdown-text">Get ready...</div>
+        </div>
+      </section>
+
+      <!-- Preview Section -->
+      <section class="preview-section">
+        <h2>Captured Images</h2>
+        <div class="image-previews">
+          <div class="image-preview">
+            <h3>Left Image</h3>
+            <div class="preview-container" id="left-preview-container">
+              <div class="preview-placeholder">
+                <span class="icon">🖼️</span>
+                <span>No image captured</span>
+              </div>
+              <img id="left-preview" class="preview-image" style="display: none;">
+              <div class="preview-actions" style="display: none;">
+                <button class="btn btn-sm btn-secondary" id="retake-left-btn">Retake</button>
+                <button class="btn btn-sm btn-danger" id="delete-left-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="image-preview">
+            <h3>Right Image</h3>
+            <div class="preview-container" id="right-preview-container">
+              <div class="preview-placeholder">
+                <span class="icon">🖼️</span>
+                <span>No image captured</span>
+              </div>
+              <img id="right-preview" class="preview-image" style="display: none;">
+              <div class="preview-actions" style="display: none;">
+                <button class="btn btn-sm btn-secondary" id="retake-right-btn">Retake</button>
+                <button class="btn btn-sm btn-danger" id="delete-right-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Save Section -->
+      <section class="save-section">
+        <div class="save-options">
+          <h2>Save Options</h2>
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="save-to-profile" checked>
+              <span class="checkmark"></span>
+              Save to user profile
+            </label>
+          </div>
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-use-profile">
+              <span class="checkmark"></span>
+              Automatically use in job applications
+            </label>
+          </div>
+        </div>
+
+        <div class="save-controls">
+          <button class="btn btn-success" id="save-images-btn" disabled>
+            <span class="icon">💾</span>
+            Save Images
+          </button>
+          <button class="btn btn-secondary" id="clear-all-btn">
+            <span class="icon">🗑️</span>
+            Clear All
+          </button>
+        </div>
+      </section>
+
+      <!-- Status Messages -->
+      <div class="status-messages" id="status-messages"></div>
+    </main>
+  </div>
+
+  <script src="webcam-capture.js"></script>
+</body>
+</html>

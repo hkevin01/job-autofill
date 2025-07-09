@@ -16,6 +16,7 @@ export interface IUserProfile {
   education: IEducation[];
   skills: string[];
   preferences: IPreferences;
+  images?: IProfileImages;
 }
 
 export interface IPersonalInfo {
@@ -275,4 +276,20 @@ export interface ITemplate {
   };
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IProfileImages {
+  leftImage?: string;  // Base64 image data
+  rightImage?: string; // Base64 image data
+  metadata?: {
+    uploadedAt: Date;
+    resolution?: string;
+    deviceId?: string;
+    saveToProfile: boolean;
+    autoUseProfile: boolean;
+    size?: {
+      left: number;
+      right: number;
+    };
+  };
 }

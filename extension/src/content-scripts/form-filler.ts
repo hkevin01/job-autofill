@@ -1,13 +1,5 @@
-// Form filler content script for Job AutoFill extension
-
-console.log('Job AutoFill form filler loaded');
-
-interface FillableField {
-  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-  type: string;
-  label: string;
-  value?: string;
-}
+// Enhanced form filler with multi-platform support and AI integration
+import apiService from '../services/api.js';
 
 interface UserProfile {
   personalInfo: {
@@ -19,7 +11,7 @@ interface UserProfile {
     city: string;
     state: string;
     zipCode: string;
-    linkedinUrl?: string;
+    country: string;
   };
   experience: Array<{
     company: string;
@@ -27,354 +19,624 @@ interface UserProfile {
     startDate: string;
     endDate: string;
     description: string;
-    skills: string[];
   }>;
   education: Array<{
     institution: string;
     degree: string;
     field: string;
     graduationDate: string;
+    gpa?: string;
   }>;
   skills: string[];
+  certifications: Array<{
+    name: string;
+    issuer: string;
+    date: string;
+    expiryDate?: string;
+  }>;
+  preferences: {
+    jobTypes: string[];
+    industries: string[];
+    locations: string[];
+    salaryRange: {
+      min: number;
+      max: number;
+    };
+    remote: boolean;
+  };
 }
 
-class FormFiller {
+class EnhancedFormFiller {
   private userProfile: UserProfile | null = null;
   private settings: any = {};
+  private templates: any[] = [];
+  private currentJobDetails: any = null;
+  private fillCount = 0;
+  private analytics = {
+    startTime: Date.now(),
+    formFieldsFilled: 0,
+    aiResponsesGenerated: 0,
+    templatesUsed: 0,
+  };
 
   constructor() {
     this.loadUserData();
     this.setupMessageListener();
+    this.initializeApiConnection();
   }
 
-  private async loadUserData() {
+  private async loadUserData(): Promise<void> {
     try {
+      // Load local cache first
       const result = await chrome.storage.sync.get(['userProfile', 'settings']);
       this.userProfile = result.userProfile || null;
       this.settings = result.settings || {};
+
+      // Sync with backend if authenticated
+      if (apiService.isAuthenticated()) {
+        await this.syncProfileWithBackend();
+      }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.warn('Failed to load user data:', error);
     }
   }
 
-  private setupMessageListener() {
-    chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
-      switch (message.type) {
-        case 'AUTO_FILL_FORMS':
-          this.fillAllForms().then(result => sendResponse(result));
-          return true; // Keep message channel open for async response
-        
-        case 'ANALYZE_PAGE':
-          const analysis = this.analyzePage();
-          sendResponse(analysis);
-          break;
-        
-        case 'SAVE_APPLICATION':
-          this.saveCurrentApplication().then(result => sendResponse(result));
-          return true;
-        
-        case 'SETTINGS_UPDATED':
-          this.settings = message.data;
-          break;
+  private async syncProfileWithBackend(): Promise<void> {
+    try {
+      const response = await apiService.getProfile();
+      if (response.success && response.data) {
+        this.userProfile = response.data;
+        // Update local cache
+        await chrome.storage.sync.set({ userProfile: this.userProfile });
       }
-    });
+    } catch (error) {
+      console.warn('Failed to sync profile with backend:', error);
+    }
   }
 
-  public analyzePage(): { success: boolean; data: { formsFound: number; fields: number } } {
-    const forms = document.querySelectorAll('form');
-    let totalFields = 0;
-    
-    forms.forEach(form => {
-      const fields = this.detectFormFields(form);
-      totalFields += fields.length;
-    });
-
-    return {
-      success: true,
-      data: {
-        formsFound: forms.length,
-        fields: totalFields
+  private async initializeApiConnection(): Promise<void> {
+    try {
+      const isConnected = await apiService.checkConnection();
+      if (!isConnected) {
+        console.warn('Backend API is not available, using local data only');
       }
+    } catch (error) {
+      console.warn('Failed to connect to backend:', error);
+    }
+  }
+
+  private setupMessageListener(): void {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        switch (message.type) {
+          case 'FILL_FORM':
+            this.handleFillFormMessage(message.data);
+            break;
+          case 'FILL_FORM_AI':
+            this.fillFormWithAI(message.data.jobDetails);
+            break;
+          case 'ANALYZE_JOB':
+            this.analyzeCurrentJobPosting(sendResponse);
+            return true; // Required for async response
+          case 'GET_FORM_DATA':
+            this.getFormData(sendResponse);
+            return true;
+        }
+      });
+    }
+  }
+
+  private async handleFillFormMessage(data: any): Promise<void> {
+    this.analytics.startTime = Date.now();
+    
+    if (data.useAI && data.jobDetails) {
+      await this.fillFormWithAI(data.jobDetails);
+    } else {
+      await this.fillFormBasic();
+    }
+
+    // Track analytics
+    await this.trackFormFillAnalytics();
+  }
+
+  private async trackFormFillAnalytics(): Promise<void> {
+    if (!apiService.isAuthenticated()) return;
+
+    try {
+      const analytics = {
+        ...this.analytics,
+        completionTime: Date.now() - this.analytics.startTime,
+        url: window.location.href,
+        domain: window.location.hostname,
+      };
+
+      // Log analytics (could be sent to backend)
+      console.log('Form fill analytics:', analytics);
+    } catch (error) {
+      console.warn('Failed to track analytics:', error);
+    }
+  }
+
+  private async fillFormBasic(): Promise<void> {
+    if (!this.userProfile) {
+      console.warn('No user profile available for form filling');
+      return;
+    }
+
+    await this.loadTemplates();
+    
+    try {
+      await this.fillPersonalInfo();
+      await this.fillExperience();
+      await this.fillEducation();
+      await this.fillSkills();
+      
+      this.analytics.formFieldsFilled = document.querySelectorAll('input:not([value=""]), textarea:not(:empty), select option:checked').length;
+      
+      console.log('Basic form filling completed');
+    } catch (error) {
+      console.error('Form filling error:', error);
+    }
+  }
+      return;
+    }
+
+    // Get field mapping from enhanced detector
+    const formDetector = (window as any).enhancedFormDetector;
+    if (!formDetector) {
+      console.warn('Enhanced form detector not available');
+      return;
+    }
+
+    const fieldMapping = formDetector.getFieldMapping();
+    await this.fillStandardFields(fieldMapping);
+  }
+
+  private async initializeAuthToken(): Promise<void> {
+    try {
+      const result = await chrome.storage.sync.get(['authToken']);
+      this.authToken = result.authToken || null;
+      
+      if (this.authToken) {
+        await this.loadBackendProfile();
+        await this.loadTemplates();
+      }
+    } catch (error) {
+      console.warn('Failed to initialize auth token:', error);
+    }
+  }
+
+  private async loadBackendProfile(): Promise<void> {
+    if (!this.authToken) return;
+
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.userProfile = this.transformBackendProfile(data.data);
+        console.log('✅ Loaded profile from backend');
+      }
+    } catch (error) {
+      console.warn('Failed to load profile from backend:', error);
+      // Fallback to local storage
+      await this.loadUserData();
+    }
+  }
+
+  private async loadTemplates(): Promise<void> {
+    if (!this.authToken) return;
+
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/templates?includePublic=true`, {
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.templates = data.data.templates || [];
+        console.log(`✅ Loaded ${this.templates.length} templates from backend`);
+      }
+    } catch (error) {
+      console.warn('Failed to load templates from backend:', error);
+    }
+  }
+
+  private transformBackendProfile(backendProfile: any): UserProfile {
+    return {
+      personalInfo: {
+        firstName: backendProfile.personalInfo?.firstName || '',
+        lastName: backendProfile.personalInfo?.lastName || '',
+        email: backendProfile.personalInfo?.email || '',
+        phone: backendProfile.personalInfo?.phone || '',
+        address: backendProfile.personalInfo?.address?.street || '',
+        city: backendProfile.personalInfo?.address?.city || '',
+        state: backendProfile.personalInfo?.address?.state || '',
+        zipCode: backendProfile.personalInfo?.address?.zipCode || '',
+        linkedinUrl: backendProfile.personalInfo?.linkedinUrl || ''
+      },
+      experience: backendProfile.experience || [],
+      education: backendProfile.education || [],
+      skills: backendProfile.skills || []
     };
   }
 
-  public async fillAllForms(): Promise<{ success: boolean; error?: string }> {
+  public async fillFormWithAI(jobDetails: any): Promise<void> {
+    if (!this.authToken || !this.userProfile) {
+      console.warn('Cannot use AI filling without authentication and profile');
+      await this.fillFormBasic();
+      return;
+    }
+
     try {
-      if (!this.userProfile) {
-        throw new Error('User profile not found. Please complete your profile first.');
-      }
-
-      if (!this.settings.autoFillEnabled) {
-        throw new Error('Auto-fill is disabled. Enable it in settings.');
-      }
-
-      const forms = Array.from(document.querySelectorAll('form'));
-      let filledFormsCount = 0;
-
-      for (const form of forms) {
-        const filled = await this.fillForm(form as HTMLFormElement);
-        if (filled) filledFormsCount++;
-      }
-
-      if (filledFormsCount === 0) {
-        throw new Error('No forms found to fill');
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error filling forms:', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  private async fillForm(form: HTMLFormElement): Promise<boolean> {
-    const fields = this.detectFormFields(form);
-    let filledCount = 0;
-
-    for (const field of fields) {
-      const value = this.getFieldValue(field);
-      if (value && this.fillField(field.element, value)) {
-        filledCount++;
-        // Add small delay between fills for natural feel
-        await this.delay(100);
-      }
-    }
-
-    return filledCount > 0;
-  }
-
-  private detectFormFields(form: HTMLFormElement): FillableField[] {
-    const fields: FillableField[] = [];
-    const inputs = form.querySelectorAll('input, textarea, select');
-
-    inputs.forEach(element => {
-      const el = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-      
-      // Skip hidden, submit, and button inputs
-      if (el.type === 'hidden' || el.type === 'submit' || el.type === 'button') {
+      // Get enhanced form detector
+      const formDetector = (window as any).enhancedFormDetector;
+      if (!formDetector) {
+        console.warn('Enhanced form detector not available');
+        await this.fillFormBasic();
         return;
       }
 
-      const fieldType = this.detectFieldType(el);
-      if (fieldType) {
-        fields.push({
-          element: el,
-          type: fieldType,
-          label: this.getFieldLabel(el)
-        });
-      }
-    });
+      const fieldMapping = formDetector.getFieldMapping();
+      const platformFeatures = formDetector.getPlatformFeatures();
 
-    return fields;
+      // Analyze the job for better responses
+      const analysis = await this.analyzeJobWithAI(jobDetails);
+      
+      // Fill standard fields
+      await this.fillStandardFields(fieldMapping);
+
+      // Fill custom fields with AI-generated content
+      await this.fillCustomFieldsWithAI(fieldMapping, jobDetails, analysis, platformFeatures);
+
+      // Track application for analytics
+      await this.trackApplicationStart(jobDetails);
+
+      console.log('✅ Form filled using AI assistance');
+    } catch (error) {
+      console.error('AI form filling failed:', error);
+      await this.fillFormBasic();
+    }
   }
 
-  private detectFieldType(element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string | null {
-    const name = element.name?.toLowerCase() || '';
-    const id = element.id?.toLowerCase() || '';
-    const placeholder = (element as HTMLInputElement).placeholder?.toLowerCase() || '';
-    const label = this.getFieldLabel(element).toLowerCase();
+  private async analyzeJobWithAI(jobDetails: any): Promise<any> {
+    if (!this.authToken) return null;
 
-    // Personal information
-    if (this.matchesPattern(name, id, placeholder, label, ['first', 'fname', 'given'])) return 'firstName';
-    if (this.matchesPattern(name, id, placeholder, label, ['last', 'lname', 'surname', 'family'])) return 'lastName';
-    if (this.matchesPattern(name, id, placeholder, label, ['email', 'mail'])) return 'email';
-    if (this.matchesPattern(name, id, placeholder, label, ['phone', 'tel', 'mobile', 'cell'])) return 'phone';
-    
-    // Address
-    if (this.matchesPattern(name, id, placeholder, label, ['address', 'street'])) return 'address';
-    if (this.matchesPattern(name, id, placeholder, label, ['city', 'town'])) return 'city';
-    if (this.matchesPattern(name, id, placeholder, label, ['state', 'province', 'region'])) return 'state';
-    if (this.matchesPattern(name, id, placeholder, label, ['zip', 'postal', 'postcode'])) return 'zipCode';
-    
-    // Professional
-    if (this.matchesPattern(name, id, placeholder, label, ['linkedin', 'profile'])) return 'linkedinUrl';
-    if (this.matchesPattern(name, id, placeholder, label, ['resume', 'cv'])) return 'resume';
-    if (this.matchesPattern(name, id, placeholder, label, ['cover', 'letter', 'motivation'])) return 'coverLetter';
-    
-    // Check for textarea or large text fields for cover letters
-    if (element.tagName.toLowerCase() === 'textarea') {
-      if (this.matchesPattern(name, id, placeholder, label, ['cover', 'letter', 'why', 'motivation', 'interest'])) {
-        return 'coverLetter';
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/ai/analyze-job-advanced`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jobTitle: jobDetails.title,
+          jobDescription: jobDetails.description,
+          companyName: jobDetails.company
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data;
       }
-      if (this.matchesPattern(name, id, placeholder, label, ['summary', 'about', 'bio', 'description'])) {
-        return 'summary';
-      }
+    } catch (error) {
+      console.warn('Failed to analyze job with AI:', error);
     }
 
     return null;
   }
 
-  private matchesPattern(name: string, id: string, placeholder: string, label: string, patterns: string[]): boolean {
-    const text = `${name} ${id} ${placeholder} ${label}`;
-    return patterns.some(pattern => text.includes(pattern));
+  private async fillStandardFields(fieldMapping: Map<string, HTMLInputElement>): Promise<void> {
+    if (!this.userProfile) return;
+
+    const personalInfo = this.userProfile.personalInfo;
+    const standardFields = {
+      firstName: personalInfo.firstName,
+      lastName: personalInfo.lastName,
+      email: personalInfo.email,
+      phone: personalInfo.phone,
+      address: personalInfo.address,
+      city: personalInfo.city,
+      state: personalInfo.state,
+      zipCode: personalInfo.zipCode
+    };
+
+    for (const [fieldName, value] of Object.entries(standardFields)) {
+      const field = fieldMapping.get(fieldName);
+      if (field && value) {
+        await this.fillFieldWithAnimation(field, value);
+      }
+    }
+  }
+
+  private async fillCustomFieldsWithAI(
+    fieldMapping: Map<string, HTMLInputElement>,
+    jobDetails: any,
+    analysis: any,
+    platformFeatures: any
+  ): Promise<void> {
+    // Find text areas and custom fields that might need AI-generated content
+    const customFields = this.identifyCustomFields(fieldMapping);
+
+    for (const field of customFields) {
+      const aiContent = await this.generateAIContent(field, jobDetails, analysis);
+      if (aiContent) {
+        await this.fillFieldWithAnimation(field.element, aiContent);
+      }
+    }
+  }
+
+  private identifyCustomFields(fieldMapping: Map<string, HTMLInputElement>): Array<{element: HTMLElement, type: string, purpose: string}> {
+    const customFields: Array<{element: HTMLElement, type: string, purpose: string}> = [];
+    
+    // Look for text areas and large text inputs
+    document.querySelectorAll('textarea, input[type="text"]').forEach((element: HTMLElement) => {
+      const el = element as HTMLInputElement | HTMLTextAreaElement;
+      
+      // Skip if it's already mapped to a standard field
+      const isStandardField = Array.from(fieldMapping.values()).includes(el as HTMLInputElement);
+      if (isStandardField) return;
+
+      const purpose = this.identifyFieldPurpose(el);
+      if (purpose !== 'unknown') {
+        customFields.push({
+          element: el,
+          type: el.tagName.toLowerCase(),
+          purpose
+        });
+      }
+    });
+
+    return customFields;
+  }
+
+  private identifyFieldPurpose(element: HTMLElement): string {
+    const label = this.getFieldLabel(element);
+    const placeholder = element.getAttribute('placeholder') || '';
+    const name = element.getAttribute('name') || '';
+    const id = element.getAttribute('id') || '';
+    
+    const text = `${label} ${placeholder} ${name} ${id}`.toLowerCase();
+
+    if (text.includes('cover letter') || text.includes('covering letter')) {
+      return 'cover_letter';
+    }
+    if (text.includes('why') && (text.includes('interested') || text.includes('want') || text.includes('apply'))) {
+      return 'why_interested';
+    }
+    if (text.includes('experience') || text.includes('background')) {
+      return 'experience';
+    }
+    if (text.includes('skills') || text.includes('qualifications')) {
+      return 'skills';
+    }
+    if (text.includes('personal statement') || text.includes('about yourself')) {
+      return 'personal_statement';
+    }
+    if (text.includes('additional') || text.includes('comments') || text.includes('notes')) {
+      return 'additional_info';
+    }
+
+    return 'unknown';
+  }
+
+  private async generateAIContent(field: any, jobDetails: any, analysis: any): Promise<string | null> {
+    if (!this.authToken) return null;
+
+    try {
+      // First try to find a relevant template
+      const template = this.findBestTemplate(field.purpose, jobDetails);
+      if (template) {
+        return this.populateTemplate(template, jobDetails, analysis);
+      }
+
+      // Fall back to AI generation
+      const response = await fetch(`${this.apiBaseUrl}/ai/generate-response`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fieldType: field.purpose,
+          context: {
+            jobDetails,
+            analysis,
+            fieldLabel: this.getFieldLabel(field.element)
+          },
+          options: {
+            tone: this.settings.tone || 'professional',
+            length: this.getDesiredLength(field.element)
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data.content;
+      }
+    } catch (error) {
+      console.warn('Failed to generate AI content:', error);
+    }
+
+    return null;
+  }
+
+  private findBestTemplate(purpose: string, jobDetails: any): any {
+    // Find templates matching the field purpose
+    const relevantTemplates = this.templates.filter(template => 
+      template.category === purpose ||
+      template.tags?.includes(purpose) ||
+      template.tags?.includes(jobDetails.platform?.toLowerCase())
+    );
+
+    if (relevantTemplates.length === 0) return null;
+
+    // Sort by usage count and rating
+    relevantTemplates.sort((a, b) => {
+      const scoreA = (a.usageCount || 0) * 0.7 + (a.rating || 0) * 0.3;
+      const scoreB = (b.usageCount || 0) * 0.7 + (b.rating || 0) * 0.3;
+      return scoreB - scoreA;
+    });
+
+    return relevantTemplates[0];
+  }
+
+  private populateTemplate(template: any, jobDetails: any, analysis: any): string {
+    let content = template.content;
+
+    // Replace common placeholders
+    const placeholders = {
+      '{jobTitle}': jobDetails.title || '',
+      '{companyName}': jobDetails.company || '',
+      '{firstName}': this.userProfile?.personalInfo.firstName || '',
+      '{lastName}': this.userProfile?.personalInfo.lastName || '',
+      '{skills}': this.userProfile?.skills.join(', ') || '',
+      '{topSkills}': analysis?.skillMatch?.matchedSkills?.slice(0, 3).join(', ') || '',
+      '{relevantExperience}': this.getRelevantExperience(analysis) || '',
+      '{strengthsToHighlight}': analysis?.advancedRecommendations?.strengthsToHighlight?.join(', ') || ''
+    };
+
+    for (const [placeholder, value] of Object.entries(placeholders)) {
+      content = content.replace(new RegExp(placeholder, 'g'), value);
+    }
+
+    return content;
+  }
+
+  private getRelevantExperience(analysis: any): string {
+    if (!this.userProfile?.experience || !analysis?.skillMatch?.matchedSkills) {
+      return '';
+    }
+
+    const relevantExperiences = this.userProfile.experience.filter(exp => {
+      return analysis.skillMatch.matchedSkills.some((skill: string) =>
+        exp.skills.some(expSkill => 
+          expSkill.toLowerCase().includes(skill.toLowerCase()) ||
+          skill.toLowerCase().includes(expSkill.toLowerCase())
+        )
+      );
+    });
+
+    return relevantExperiences
+      .slice(0, 2)
+      .map(exp => `${exp.position} at ${exp.company}`)
+      .join(', ');
+  }
+
+  private getDesiredLength(element: HTMLElement): 'short' | 'medium' | 'long' {
+    if (element.tagName.toLowerCase() === 'textarea') {
+      const rows = parseInt(element.getAttribute('rows') || '0');
+      if (rows > 10) return 'long';
+      if (rows > 5) return 'medium';
+    }
+    
+    const maxLength = parseInt(element.getAttribute('maxlength') || '0');
+    if (maxLength > 1000) return 'long';
+    if (maxLength > 200) return 'medium';
+    
+    return 'short';
+  }
+
+  private async trackApplicationStart(jobDetails: any): Promise<void> {
+    if (!this.authToken) return;
+
+    try {
+      await fetch(`${this.apiBaseUrl}/applications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jobDetails,
+          status: 'draft',
+          tracking: {
+            startedAt: new Date().toISOString(),
+            source: window.location.hostname,
+            referrer: document.referrer
+          }
+        })
+      });
+    } catch (error) {
+      console.warn('Failed to track application start:', error);
+    }
+  }
+
+  private async fillFieldWithAnimation(element: HTMLElement, value: string): Promise<void> {
+    const input = element as HTMLInputElement | HTMLTextAreaElement;
+    
+    // Add visual feedback
+    element.style.backgroundColor = '#e3f2fd';
+    element.style.transition = 'background-color 0.3s ease';
+    
+    // Simulate typing for better UX
+    if (this.settings.animateTyping) {
+      await this.typeText(input, value);
+    } else {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    // Reset background
+    setTimeout(() => {
+      element.style.backgroundColor = '';
+    }, 1000);
+  }
+
+  private async typeText(element: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
+    element.value = '';
+    element.focus();
+    
+    for (let i = 0; i < text.length; i++) {
+      element.value += text[i];
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 10));
+    }
+    
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    element.blur();
   }
 
   private getFieldLabel(element: HTMLElement): string {
-    // Check for associated label
-    const id = element.id;
+    // Try multiple ways to get field label
+    const id = element.getAttribute('id');
     if (id) {
       const label = document.querySelector(`label[for="${id}"]`);
       if (label) return label.textContent?.trim() || '';
     }
 
-    // Check for parent label
+    // Look for parent label
     const parentLabel = element.closest('label');
     if (parentLabel) return parentLabel.textContent?.trim() || '';
 
-    // Check for nearby text
+    // Look for adjacent label
     const previousSibling = element.previousElementSibling;
-    if (previousSibling && ['LABEL', 'SPAN', 'DIV'].includes(previousSibling.tagName)) {
+    if (previousSibling && previousSibling.tagName === 'LABEL') {
       return previousSibling.textContent?.trim() || '';
     }
 
-    return '';
-  }
-
-  private getFieldValue(field: FillableField): string | null {
-    if (!this.userProfile) return null;
-
-    const { personalInfo, experience, education } = this.userProfile;
-
-    switch (field.type) {
-      case 'firstName':
-        return personalInfo.firstName;
-      case 'lastName':
-        return personalInfo.lastName;
-      case 'email':
-        return personalInfo.email;
-      case 'phone':
-        return personalInfo.phone;
-      case 'address':
-        return personalInfo.address;
-      case 'city':
-        return personalInfo.city;
-      case 'state':
-        return personalInfo.state;
-      case 'zipCode':
-        return personalInfo.zipCode;
-      case 'linkedinUrl':
-        return personalInfo.linkedinUrl || '';
-      case 'coverLetter':
-        return this.generateCoverLetter();
-      case 'summary':
-        return this.generateSummary();
-      default:
-        return null;
-    }
-  }
-
-  private fillField(element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value: string): boolean {
-    try {
-      // Handle different input types
-      if (element.tagName.toLowerCase() === 'select') {
-        const select = element as HTMLSelectElement;
-        const option = Array.from(select.options).find(opt => 
-          opt.text.toLowerCase().includes(value.toLowerCase()) ||
-          opt.value.toLowerCase().includes(value.toLowerCase())
-        );
-        if (option) {
-          select.value = option.value;
-          this.triggerEvents(element);
-          return true;
-        }
-      } else {
-        // Regular input or textarea
-        element.value = value;
-        this.triggerEvents(element);
-        return true;
-      }
-    } catch (error) {
-      console.error('Error filling field:', error);
-    }
-    return false;
-  }
-
-  private triggerEvents(element: HTMLElement) {
-    // Trigger events to ensure form validation and handlers work
-    const events = ['input', 'change', 'blur'];
-    events.forEach(eventType => {
-      const event = new Event(eventType, { bubbles: true });
-      element.dispatchEvent(event);
-    });
-  }
-
-  private generateCoverLetter(): string {
-    if (!this.userProfile) return '';
-    
-    const { personalInfo, experience } = this.userProfile;
-    const latestJob = experience?.[0];
-    
-    return `Dear Hiring Manager,
-
-I am writing to express my strong interest in this position. With my background in ${latestJob?.position || 'my field'} and experience at ${latestJob?.company || 'previous companies'}, I am confident I would be a valuable addition to your team.
-
-In my previous role${latestJob ? ` as ${latestJob.position} at ${latestJob.company}` : ''}, I have developed strong skills in ${this.userProfile.skills.slice(0, 3).join(', ')}. I am particularly drawn to this opportunity because it aligns perfectly with my career goals and expertise.
-
-I would welcome the opportunity to discuss how my skills and experience can contribute to your organization's success.
-
-Best regards,
-${personalInfo.firstName} ${personalInfo.lastName}`;
-  }
-
-  private generateSummary(): string {
-    if (!this.userProfile) return '';
-    
-    const { experience, skills } = this.userProfile;
-    const latestJob = experience?.[0];
-    
-    return `Experienced professional with ${experience?.length || 0}+ years in ${latestJob?.position || 'the industry'}. Skilled in ${skills.slice(0, 5).join(', ')}. Proven track record of delivering results and contributing to team success.`;
-  }
-
-  private async saveCurrentApplication(): Promise<{ success: boolean; error?: string }> {
-    try {
-      const jobDetails = this.extractJobDetails();
-      const application = {
-        jobDetails,
-        url: window.location.href,
-        appliedAt: new Date().toISOString(),
-        status: 'saved'
-      };
-
-      // Save to storage
-      const result = await chrome.storage.local.get('applications');
-      const applications = result.applications || [];
-      applications.push(application);
-      await chrome.storage.local.set({ applications });
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error saving application:', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  private extractJobDetails(): any {
-    // Try to extract job title, company, and description from the page
-    const jobTitle = this.extractText(['h1', '.job-title', '[data-test="job-title"]']);
-    const company = this.extractText(['.company-name', '[data-test="company-name"]', '.employer']);
-    const description = this.extractText(['.job-description', '.description', '.job-summary']);
-
-    return {
-      title: jobTitle,
-      company: company,
-      description: description?.substring(0, 1000) // Limit description length
-    };
-  }
-
-  private extractText(selectors: string[]): string {
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element?.textContent) {
-        return element.textContent.trim();
-      }
-    }
-    return '';
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    // Use placeholder or name as fallback
+    return element.getAttribute('placeholder') || 
+           element.getAttribute('name') || 
+           element.getAttribute('id') || 
+           'Unknown Field';
   }
 }
 
-// Initialize form filler
-const formFiller = new FormFiller();
+// Initialize enhanced form filler
+const enhancedFormFiller = new EnhancedFormFiller();
+
+// Export for use by other scripts and maintain backward compatibility  
+(window as any).formFiller = enhancedFormFiller;
+(window as any).enhancedFormFiller = enhancedFormFiller;

@@ -20,6 +20,43 @@
     </header>
 
     <main class="popup-main">
+      <!-- Authentication Section -->
+      <section class="section" id="login-section" style="display: none;">
+        <h2 class="section-title">Get Started</h2>
+        <div class="auth-content">
+          <p>Sign in to sync your profile and access AI features</p>
+          <button class="btn btn-primary" id="login-btn">
+            <span class="icon">🔑</span>
+            Sign In / Register
+          </button>
+        </div>
+      </section>
+
+      <!-- Authenticated User Section -->
+      <section class="section" id="authenticated-section" style="display: none;">
+        <div class="user-info">
+          <div class="user-avatar">👤</div>
+          <div class="user-details">
+            <span class="user-name" id="user-name">User</span>
+            <button class="btn-link" id="logout-btn">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- Analytics Preview -->
+        <div class="analytics-preview" id="analytics-preview">
+          <div class="analytics-summary">
+            <div class="metric">
+              <span class="metric-value">0</span>
+              <span class="metric-label">Applications</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value">0%</span>
+              <span class="metric-label">Success Rate</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Current Page Analysis -->
       <section class="section" id="page-analysis">
         <h2 class="section-title">Page Analysis</h2>
@@ -35,9 +72,16 @@
           <div class="forms-detected" id="forms-detected" style="display: none;">
             <span class="icon">📝</span>
             <p><span id="form-count">0</span> application form(s) detected</p>
+            <div class="job-match" id="job-match" style="display: none;">
+              <div class="match-score">
+                <span class="score-value" id="match-score">0%</span>
+                <span class="score-label">Skill Match</span>
+              </div>
+              <div class="recommendations" id="recommendations"></div>
+            </div>
             <button class="btn btn-primary" id="auto-fill-btn">
               <span class="icon">🤖</span>
-              Auto Fill Forms
+              Smart Auto Fill
             </button>
           </div>
         </div>
@@ -48,6 +92,28 @@
         <h2 class="section-title">Quick Actions</h2>
         <div class="action-buttons">
           <button class="btn btn-secondary" id="scan-page-btn">
+            <span class="icon">🔍</span>
+            Scan Page
+          </button>
+          <button class="btn btn-secondary" id="save-application-btn">
+            <span class="icon">💾</span>
+            Save Application
+          </button>
+          <button class="btn btn-secondary" id="webcam-capture-btn">
+            <span class="icon">📷</span>
+            Capture Photos
+          </button>
+          </button>
+          <button class="btn btn-secondary" id="templates-btn" style="display: none;">
+            <span class="icon">📝</span>
+            Templates
+          </button>
+          <button class="btn btn-secondary" id="analytics-btn" style="display: none;">
+            <span class="icon">📊</span>
+            Analytics
+          </button>
+        </div>
+      </section>
             <span class="icon">🔍</span>
             Scan Page
           </button>

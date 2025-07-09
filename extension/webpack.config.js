@@ -6,8 +6,10 @@ module.exports = {
     'background/service-worker': './src/background/service-worker.ts',
     'content-scripts/form-detector': './src/content-scripts/form-detector.ts',
     'content-scripts/form-filler': './src/content-scripts/form-filler.ts',
+    'content-scripts/job-board-detector': './src/content-scripts/job-board-detector.ts',
     'popup/popup': './src/popup/popup.ts',
-    'options/options': './src/options/options.ts'
+    'options/options': './src/options/options.ts',
+    'services/api': './src/services/api.ts'
   },
   module: {
     rules: [
@@ -24,6 +26,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
   },
   output: {
     filename: '[name].js',
@@ -46,6 +51,13 @@ module.exports = {
   optimization: {
     splitChunks: {
       chunks: 'all',
+      cacheGroups: {
+        api: {
+          test: /[\\/]services[\\/]/,
+          name: 'api-service',
+          chunks: 'all',
+        },
+      },
     },
   },
 };

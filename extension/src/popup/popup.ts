@@ -1,4 +1,5 @@
 // Popup JavaScript functionality
+import apiService from '../services/api.js';
 
 console.log('Job AutoFill popup loaded');
 
@@ -18,10 +19,22 @@ let profileIncomplete: HTMLElement;
 let profileComplete: HTMLElement;
 let optionsBtn: HTMLElement;
 let helpBtn: HTMLElement;
+let loginSection: HTMLElement;
+let authenticatedSection: HTMLElement;
+let loginBtn: HTMLElement;
+let logoutBtn: HTMLElement;
+let analyticsBtn: HTMLElement;
+let templatesBtn: HTMLElement;
+
+// State management
+let currentJobAnalysis: any = null;
+let isAuthenticated = false;
+let userProfile: any = null;
 
 // Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   initializeElements();
+  checkAuthenticationStatus();
   loadSettings();
   analyzeCurrentPage();
   setupEventListeners();
@@ -43,6 +56,100 @@ function initializeElements() {
   profileComplete = document.getElementById('profile-complete')!;
   optionsBtn = document.getElementById('options-btn')!;
   helpBtn = document.getElementById('help-btn')!;
+  
+  // New authentication and feature elements
+  loginSection = document.getElementById('login-section')!;
+  authenticatedSection = document.getElementById('authenticated-section')!;
+  loginBtn = document.getElementById('login-btn')!;
+  logoutBtn = document.getElementById('logout-btn')!;
+  analyticsBtn = document.getElementById('analytics-btn')!;
+  templatesBtn = document.getElementById('templates-btn')!;
+}
+
+async function checkAuthenticationStatus() {
+  try {
+    isAuthenticated = apiService.isAuthenticated();
+    
+    if (isAuthenticated) {
+      const profileResponse = await apiService.getProfile();
+      if (profileResponse.success) {
+        userProfile = profileResponse.data;
+        showAuthenticatedUI();
+      } else {
+        showUnauthenticatedUI();
+      }
+    } else {
+      showUnauthenticatedUI();
+    }
+  } catch (error) {
+    console.error('Authentication check failed:', error);
+    showUnauthenticatedUI();
+  }
+}
+
+function showAuthenticatedUI() {
+  if (loginSection) loginSection.style.display = 'none';
+  if (authenticatedSection) authenticatedSection.style.display = 'block';
+  updateProfileStatus();
+  loadAnalyticsPreview();
+}
+
+function showUnauthenticatedUI() {
+  if (loginSection) loginSection.style.display = 'block';
+  if (authenticatedSection) authenticatedSection.style.display = 'none';
+}
+
+function updateProfileStatus() {
+  if (userProfile && profileComplete && profileIncomplete) {
+    const hasBasicInfo = userProfile.personalInfo?.firstName && 
+                        userProfile.personalInfo?.lastName && 
+                        userProfile.personalInfo?.email;
+    const hasExperience = userProfile.experience?.length > 0;
+    const hasSkills = userProfile.skills?.length > 0;
+    
+    if (hasBasicInfo && hasExperience && hasSkills) {
+      profileComplete.style.display = 'block';
+      profileIncomplete.style.display = 'none';
+    } else {
+      profileComplete.style.display = 'none';
+      profileIncomplete.style.display = 'block';
+    }
+  }
+}
+
+async function loadAnalyticsPreview() {
+  try {
+    const analyticsResponse = await apiService.getApplicationAnalytics('7');
+    if (analyticsResponse.success && analyticsResponse.data) {
+      const analytics = analyticsResponse.data;
+      updateAnalyticsDisplay(analytics);
+    }
+  } catch (error) {
+    console.warn('Failed to load analytics preview:', error);
+  }
+}
+
+function updateAnalyticsDisplay(analytics: any) {
+  // Update analytics display in the popup
+  const analyticsPreview = document.getElementById('analytics-preview');
+  if (analyticsPreview) {
+    analyticsPreview.innerHTML = `
+      <div class="analytics-summary">
+        <div class="metric">
+          <span class="metric-value">${analytics.totalApplications || 0}</span>
+          <span class="metric-label">Applications</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value">${Math.round(analytics.successRate || 0)}%</span>
+          <span class="metric-label">Success Rate</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value">${Math.round(analytics.aiAccuracy || 0)}%</span>
+          <span class="metric-label">AI Accuracy</span>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function setupEventListeners() {
@@ -54,6 +161,10 @@ function setupEventListeners() {
   
   // Save application button
   saveApplicationBtn.addEventListener('click', handleSaveApplication);
+  
+  // Webcam capture button
+  const webcamCaptureBtn = document.getElementById('webcam-capture-btn');
+  webcamCaptureBtn?.addEventListener('click', handleWebcamCapture);
   
   // Settings toggles
   autoFillToggle.addEventListener('change', handleAutoFillToggle);
@@ -277,6 +388,14 @@ function handleOpenOptions() {
 function handleOpenHelp() {
   chrome.tabs.create({
     url: 'https://github.com/your-username/job-autofill/wiki'
+  });
+  window.close();
+}
+
+function handleWebcamCapture() {
+  // Open webcam capture in a new tab
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('webcam/webcam-capture.html')
   });
   window.close();
 }
