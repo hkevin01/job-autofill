@@ -12,6 +12,7 @@ import aiRoutes from './routes/ai';
 import applicationRoutes from './routes/applications';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
+import templateRoutes from './routes/templates';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -101,6 +102,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

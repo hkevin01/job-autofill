@@ -4,9 +4,11 @@ import {
     createApplication,
     deleteApplication,
     getApplication,
+    getApplicationAnalytics,
     getApplications,
     getApplicationStats,
     updateApplication,
+    updateApplicationFeedback,
 } from '../controllers/applicationController';
 import { authenticate } from '../middleware/auth';
 
@@ -66,5 +68,7 @@ router.get('/:id', param('id').isMongoId(), getApplication);
 router.post('/', applicationValidation, createApplication);
 router.put('/:id', param('id').isMongoId(), applicationValidation, updateApplication);
 router.delete('/:id', param('id').isMongoId(), deleteApplication);
+router.get('/:id/analytics', param('id').isMongoId(), getApplicationAnalytics);
+router.put('/:id/feedback', param('id').isMongoId(), updateApplicationFeedback);
 
 export default router;

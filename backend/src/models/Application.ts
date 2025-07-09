@@ -52,6 +52,34 @@ const ApplicationSchema = new Schema<IApplication & Document>({
     default: Date.now,
   },
   responses: [FieldResponseSchema],
+  analytics: {
+    timeToComplete: { type: Number }, // milliseconds
+    fieldsAutoFilled: { type: Number, default: 0 },
+    totalFields: { type: Number, default: 0 },
+    automationScore: { type: Number, min: 0, max: 100 }, // percentage
+    aiConfidenceAvg: { type: Number, min: 0, max: 1 },
+    revisionCount: { type: Number, default: 0 },
+  },
+  tracking: {
+    viewedAt: { type: Date },
+    startedAt: { type: Date },
+    submittedAt: { type: Date },
+    lastModifiedAt: { type: Date },
+    source: { type: String }, // where the job was found
+    referrer: { type: String }, // how user found the job
+  },
+  feedback: {
+    userRating: { type: Number, min: 1, max: 5 },
+    userComments: { type: String },
+    aiAccuracy: { type: Number, min: 1, max: 5 },
+    wouldRecommend: { type: Boolean },
+  },
+  followUp: {
+    reminderDate: { type: Date },
+    nextAction: { type: String },
+    contactPerson: { type: String },
+    notes: { type: String },
+  },
 }, {
   timestamps: true,
 });

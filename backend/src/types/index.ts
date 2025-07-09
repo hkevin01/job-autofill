@@ -75,6 +75,34 @@ export interface IApplication {
   status: ApplicationStatus;
   appliedAt: Date;
   responses: IFieldResponse[];
+  analytics?: {
+    timeToComplete?: number;
+    fieldsAutoFilled?: number;
+    totalFields?: number;
+    automationScore?: number;
+    aiConfidenceAvg?: number;
+    revisionCount?: number;
+  };
+  tracking?: {
+    viewedAt?: Date;
+    startedAt?: Date;
+    submittedAt?: Date;
+    lastModifiedAt?: Date;
+    source?: string;
+    referrer?: string;
+  };
+  feedback?: {
+    userRating?: number;
+    userComments?: string;
+    aiAccuracy?: number;
+    wouldRecommend?: boolean;
+  };
+  followUp?: {
+    reminderDate?: Date;
+    nextAction?: string;
+    contactPerson?: string;
+    notes?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -199,4 +227,52 @@ export interface IOpenAIResponse {
     totalTokens: number;
   };
   model: string;
+}
+
+export interface IAdvancedJobAnalysis extends IJobAnalysis {
+  skillMatch: {
+    score: number;
+    matchedSkills: string[];
+    missingSkills: string[];
+    recommendedSkills: string[];
+  };
+  fitScore: number;
+  advancedRecommendations: {
+    improvementAreas: string[];
+    strengthsToHighlight: string[];
+    experienceGaps: string[];
+  };
+}
+
+export interface ISmartSuggestions {
+  skillRecommendations: string[];
+  careerPaths: string[];
+  resumeImprovements: string[];
+  marketInsights: string[];
+}
+
+// Template types
+export interface ITemplate {
+  _id?: string;
+  userId: any; // mongoose ObjectId
+  name: string;
+  category: 'cover_letter' | 'personal_statement' | 'why_interested' | 'experience' | 'skills' | 'custom';
+  content: string;
+  placeholders: {
+    name: string;
+    description: string;
+    required: boolean;
+  }[];
+  tags: string[];
+  isPublic: boolean;
+  usageCount: number;
+  rating?: number;
+  lastUsed?: Date;
+  metadata?: {
+    industry?: string;
+    jobLevel?: 'entry' | 'mid' | 'senior' | 'executive';
+    jobType?: 'full-time' | 'part-time' | 'contract' | 'freelance' | 'internship';
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }

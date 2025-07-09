@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import Application from '../models/Application';
 import { IApiResponse, IAuthRequest, IPaginatedResponse } from '../types';
 
@@ -276,6 +277,230 @@ export const getApplicationStats = async (req: IAuthRequest, res: Response): Pro
     const response: IApiResponse = {
       success: false,
       message: 'Server error retrieving application stats',
+    };
+    res.status(500).json(response);
+  }
+};
+
+// @desc    Get application analytics and statistics
+// @route   GET /api/applications/analytics
+// @access  Private
+export const getApplicationAnalytics = async (req: IAuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'User not found',
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    const userId = req.user._id;
+    const { timeRange = '30' } = req.query; // days
+    
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - parseInt(timeRange as string));
+
+    // Aggregate statistics
+    const stats = await Application.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: dateLimit }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalApplications: { $sum: 1 },
+          averageAutomationScore: { $avg: '$analytics.automationScore' },
+          averageAiConfidence: { $avg: '$analytics.aiConfidenceAvg' },
+          averageTimeToComplete: { $avg: '$analytics.timeToComplete' },
+          totalFieldsAutoFilled: { $sum: '$analytics.fieldsAutoFilled' },
+          totalFields: { $sum: '$analytics.totalFields' },
+          statusBreakdown: {
+            $push: '$status'
+          }
+        }
+      }
+    ]);
+
+    // Status distribution
+    const statusStats = await Application.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: dateLimit }
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Daily application trend
+    const dailyTrend = await Application.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: dateLimit }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          count: { $sum: 1 },
+          avgAutomation: { $avg: '$analytics.automationScore' }
+        }
+      },
+      {
+        $sort: { '_id': 1 }
+      }
+    ]);
+
+    // Success rate calculation
+    const successfulApplications = await Application.countDocuments({
+      userId,
+      status: { $in: ['interview', 'accepted'] },
+      createdAt: { $gte: dateLimit }
+    });
+
+    const totalApplications = await Application.countDocuments({
+      userId,
+      createdAt: { $gte: dateLimit }
+    });
+
+    const successRate = totalApplications > 0 ? (successfulApplications / totalApplications) * 100 : 0;
+
+    // Top companies applied to
+    const topCompanies = await Application.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: dateLimit }
+        }
+      },
+      {
+        $group: {
+          _id: '$jobDetails.company',
+          count: { $sum: 1 },
+          successRate: {
+            $avg: {
+              $cond: [
+                { $in: ['$status', ['interview', 'accepted']] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]);
+
+    const analytics = {
+      summary: {
+        totalApplications,
+        successRate: Math.round(successRate * 100) / 100,
+        averageAutomationScore: stats[0]?.averageAutomationScore || 0,
+        averageAiConfidence: stats[0]?.averageAiConfidence || 0,
+        averageTimeToComplete: stats[0]?.averageTimeToComplete || 0,
+        automationEfficiency: stats[0]?.totalFields > 0 
+          ? (stats[0]?.totalFieldsAutoFilled / stats[0]?.totalFields) * 100 
+          : 0
+      },
+      statusDistribution: statusStats.reduce((acc, stat) => {
+        acc[stat._id] = stat.count;
+        return acc;
+      }, {} as Record<string, number>),
+      dailyTrend,
+      topCompanies,
+      timeRange: parseInt(timeRange as string)
+    };
+
+    const response: IApiResponse = {
+      success: true,
+      message: 'Application analytics retrieved successfully',
+      data: analytics,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error getting application analytics:', error);
+    const response: IApiResponse = {
+      success: false,
+      message: 'Failed to retrieve application analytics',
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
+    };
+    res.status(500).json(response);
+  }
+};
+
+// @desc    Update application feedback
+// @route   POST /api/applications/:id/feedback
+// @access  Private
+export const updateApplicationFeedback = async (req: IAuthRequest, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array().map(err => err.msg),
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const { userRating, userComments, aiAccuracy, wouldRecommend } = req.body;
+
+    const application = await Application.findOne({
+      _id: req.params.id,
+      userId: req.user!._id,
+    });
+
+    if (!application) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'Application not found',
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    application.feedback = {
+      userRating,
+      userComments,
+      aiAccuracy,
+      wouldRecommend,
+    };
+
+    await application.save();
+
+    const response: IApiResponse = {
+      success: true,
+      message: 'Application feedback updated successfully',
+      data: application,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error updating application feedback:', error);
+    const response: IApiResponse = {
+      success: false,
+      message: 'Failed to update application feedback',
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
     };
     res.status(500).json(response);
   }

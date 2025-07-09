@@ -2,8 +2,10 @@ import express from 'express';
 import { body } from 'express-validator';
 import {
     analyzeJob,
+    analyzeJobAdvanced,
     generateCoverLetter,
     generateResponse,
+    generateSmartSuggestions,
     optimizeResponse,
 } from '../controllers/aiController';
 import { authenticate } from '../middleware/auth';
@@ -89,8 +91,10 @@ const optimizeValidation = [
 
 // Routes
 router.post('/analyze-job', jobAnalysisValidation, analyzeJob);
+router.post('/analyze-job-advanced', jobAnalysisValidation, analyzeJobAdvanced);
 router.post('/generate-response', responseValidation, generateResponse);
 router.post('/generate-cover-letter', coverLetterValidation, generateCoverLetter);
 router.post('/optimize-response', optimizeValidation, optimizeResponse);
+router.post('/smart-suggestions', generateSmartSuggestions);
 
 export default router;

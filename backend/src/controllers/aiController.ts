@@ -208,3 +208,95 @@ export const optimizeResponse = async (req: IAuthRequest, res: Response): Promis
     res.status(500).json(response);
   }
 };
+
+// @desc    Advanced job analysis with skill matching
+// @route   POST /api/ai/analyze-job-advanced
+// @access  Private
+export const analyzeJobAdvanced = async (req: IAuthRequest, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array().map(err => err.msg),
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const { jobTitle, jobDescription, companyName } = req.body;
+
+    if (!req.user?.profile) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'User profile is required for advanced analysis',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const analysis = await aiService.analyzeJobAdvanced(
+      jobTitle, 
+      jobDescription, 
+      req.user.profile,
+      companyName
+    );
+
+    const response: IApiResponse = {
+      success: true,
+      message: 'Advanced job analysis completed successfully',
+      data: analysis,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error in advanced job analysis:', error);
+    const response: IApiResponse = {
+      success: false,
+      message: 'Failed to perform advanced job analysis',
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
+    };
+    res.status(500).json(response);
+  }
+};
+
+// @desc    Generate smart career suggestions
+// @route   POST /api/ai/smart-suggestions
+// @access  Private
+export const generateSmartSuggestions = async (req: IAuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.profile) {
+      const response: IApiResponse = {
+        success: false,
+        message: 'User profile is required for smart suggestions',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const { targetIndustry, recentApplications } = req.body;
+
+    const suggestions = await aiService.generateSmartSuggestions(
+      req.user.profile,
+      recentApplications || [],
+      targetIndustry
+    );
+
+    const response: IApiResponse = {
+      success: true,
+      message: 'Smart suggestions generated successfully',
+      data: suggestions,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error generating smart suggestions:', error);
+    const response: IApiResponse = {
+      success: false,
+      message: 'Failed to generate smart suggestions',
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
+    };
+    res.status(500).json(response);
+  }
+};

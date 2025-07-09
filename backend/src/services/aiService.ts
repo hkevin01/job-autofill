@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { IAIResponse, ICoverLetterRequest, IJobAnalysis, IUserProfile } from '../types';
+import { IAdvancedJobAnalysis, IAIResponse, ICoverLetterRequest, IJobAnalysis, ISmartSuggestions, IUserProfile } from '../types';
 
 class AIService {
   private openai: OpenAI;
@@ -73,6 +73,100 @@ Focus on technical skills, soft skills, years of experience required, and key qu
     } catch (error) {
       console.error('Error analyzing job:', error);
       throw new Error('Failed to analyze job posting');
+    }
+  }
+
+  // Advanced job analysis with skill matching
+  async analyzeJobAdvanced(
+    jobTitle: string, 
+    jobDescription: string, 
+    userProfile: IUserProfile,
+    companyName?: string
+  ): Promise<IAdvancedJobAnalysis> {
+    try {
+      const prompt = `
+Analyze this job posting and provide detailed analysis including skill matching:
+
+Job Title: ${jobTitle}
+Company: ${companyName || 'Not specified'}
+Job Description:
+${jobDescription}
+
+User Profile Skills: ${userProfile.skills?.join(', ') || 'None specified'}
+User Experience Level: ${this.getExperienceLevel(userProfile)}
+User Industry Background: ${this.getUserIndustries(userProfile)}
+
+Provide analysis in this JSON format:
+{
+  "title": "extracted job title",
+  "company": "company name",
+  "requiredSkills": ["skill1", "skill2", ...],
+  "preferredSkills": ["skill1", "skill2", ...],
+  "experienceLevel": "entry/mid/senior/executive",
+  "jobType": "full-time/part-time/contract/freelance",
+  "industry": "industry name",
+  "keyResponsibilities": ["responsibility1", "responsibility2", ...],
+  "skillMatch": {
+    "score": 85,
+    "matchedSkills": ["skills user has that match"],
+    "missingSkills": ["required skills user lacks"],
+    "recommendedSkills": ["skills to learn for this role"]
+  },
+  "fitScore": 75,
+  "recommendations": {
+    "improvementAreas": ["areas user should improve"],
+    "strengthsToHighlight": ["user's strengths relevant to this job"],
+    "experienceGaps": ["experience gaps to address"]
+  }
+}
+
+Provide numerical scores (0-100) for skillMatch.score and fitScore.
+`;
+
+      const response = await this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert career analyst with deep knowledge of job market trends, skill requirements, and career development. Provide detailed, actionable analysis.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 1500,
+      });
+
+      const analysis = JSON.parse(response.choices[0].message.content || '{}');
+      
+      return {
+        title: analysis.title || jobTitle,
+        company: analysis.company || companyName || 'Unknown',
+        requiredSkills: analysis.requiredSkills || [],
+        preferredSkills: analysis.preferredSkills || [],
+        experienceLevel: analysis.experienceLevel || 'mid',
+        jobType: analysis.jobType || 'full-time',
+        industry: analysis.industry || 'Unknown',
+        keyResponsibilities: analysis.keyResponsibilities || [],
+        recommendations: analysis.basicRecommendations || [],
+        skillMatch: analysis.skillMatch || {
+          score: 0,
+          matchedSkills: [],
+          missingSkills: [],
+          recommendedSkills: []
+        },
+        fitScore: analysis.fitScore || 0,
+        advancedRecommendations: analysis.recommendations || {
+          improvementAreas: [],
+          strengthsToHighlight: [],
+          experienceGaps: []
+        }
+      };
+    } catch (error) {
+      console.error('Error in advanced job analysis:', error);
+      throw new Error('Failed to perform advanced job analysis');
     }
   }
 
@@ -239,6 +333,66 @@ Please provide an improved version that addresses the specified improvement type
     }
   }
 
+  // Generate smart suggestions based on application history and job market trends
+  async generateSmartSuggestions(
+    userProfile: IUserProfile,
+    recentApplications: any[] = [],
+    targetIndustry?: string
+  ): Promise<ISmartSuggestions> {
+    try {
+      const prompt = `
+Based on the user's profile and application history, provide smart career suggestions:
+
+User Profile:
+- Skills: ${userProfile.skills?.join(', ') || 'None specified'}
+- Experience: ${this.getFormattedExperience(userProfile)}
+- Education: ${this.getFormattedEducation(userProfile)}
+- Target Industry: ${targetIndustry || 'Not specified'}
+
+Recent Applications: ${recentApplications.length} applications submitted
+Application Success Rate: ${this.calculateSuccessRate(recentApplications)}%
+
+Provide recommendations in this JSON format:
+{
+  "skillRecommendations": ["specific skills to learn based on market demand"],
+  "careerPaths": ["potential career progression paths"],
+  "resumeImprovements": ["specific improvements for resume/profile"],
+  "marketInsights": ["current job market trends relevant to user"]
+}
+
+Focus on actionable, specific recommendations.
+`;
+
+      const response = await this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a senior career counselor with expertise in market trends, skill development, and career progression. Provide strategic, actionable advice.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1000,
+      });
+
+      const suggestions = JSON.parse(response.choices[0].message.content || '{}');
+      
+      return {
+        skillRecommendations: suggestions.skillRecommendations || [],
+        careerPaths: suggestions.careerPaths || [],
+        resumeImprovements: suggestions.resumeImprovements || [],
+        marketInsights: suggestions.marketInsights || []
+      };
+    } catch (error) {
+      console.error('Error generating smart suggestions:', error);
+      throw new Error('Failed to generate smart suggestions');
+    }
+  }
+
   // Private helper methods
   private buildPromptForFieldType(
     fieldType: string,
@@ -349,6 +503,56 @@ Context: ${JSON.stringify(context)}`;
     };
 
     return suggestions[improvementType] || ['Review and refine as needed'];
+  }
+
+  // Helper methods for user profile analysis
+  private getExperienceLevel(userProfile: IUserProfile): string {
+    const experience = userProfile.experience || [];
+    const totalYears = experience.reduce((total, exp) => {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+      const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+      return total + years;
+    }, 0);
+
+    if (totalYears < 2) return 'entry';
+    if (totalYears < 5) return 'mid';
+    if (totalYears < 10) return 'senior';
+    return 'executive';
+  }
+
+  private getUserIndustries(userProfile: IUserProfile): string {
+    const experience = userProfile.experience || [];
+    const industries = [...new Set(experience.map(exp => exp.company))];
+    return industries.join(', ') || 'Various';
+  }
+
+  private getFormattedExperience(userProfile: IUserProfile): string {
+    const experience = userProfile.experience || [];
+    return experience.map(exp => 
+      `${exp.position} at ${exp.company} (${this.formatDateRange(exp.startDate, exp.endDate)})`
+    ).join('; ') || 'No experience specified';
+  }
+
+  private getFormattedEducation(userProfile: IUserProfile): string {
+    const education = userProfile.education || [];
+    return education.map(edu => 
+      `${edu.degree} in ${edu.field} from ${edu.institution}`
+    ).join('; ') || 'No education specified';
+  }
+
+  private formatDateRange(startDate: Date, endDate?: Date): string {
+    const start = new Date(startDate).getFullYear();
+    const end = endDate ? new Date(endDate).getFullYear() : 'Present';
+    return `${start}-${end}`;
+  }
+
+  private calculateSuccessRate(applications: any[]): number {
+    if (applications.length === 0) return 0;
+    const successful = applications.filter(app => 
+      app.status === 'interview' || app.status === 'offer' || app.status === 'hired'
+    ).length;
+    return Math.round((successful / applications.length) * 100);
   }
 }
 
