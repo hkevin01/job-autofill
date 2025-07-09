@@ -1,17 +1,17 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
 import compression from 'compression';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import cors from 'cors';
 import dotenv from 'dotenv';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import mongoose from 'mongoose';
+import morgan from 'morgan';
 
 // Import routes
-import authRoutes from './routes/auth';
-import profileRoutes from './routes/profile';
 import aiRoutes from './routes/ai';
 import applicationRoutes from './routes/applications';
+import authRoutes from './routes/auth';
+import profileRoutes from './routes/profile';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';

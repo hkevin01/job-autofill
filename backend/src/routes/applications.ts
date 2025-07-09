@@ -1,12 +1,12 @@
 import express from 'express';
-import { body, query, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import {
-  getApplications,
-  getApplication,
-  createApplication,
-  updateApplication,
-  deleteApplication,
-  getApplicationStats,
+    createApplication,
+    deleteApplication,
+    getApplication,
+    getApplications,
+    getApplicationStats,
+    updateApplication,
 } from '../controllers/applicationController';
 import { authenticate } from '../middleware/auth';
 

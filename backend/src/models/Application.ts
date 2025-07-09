@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IApplication, IJobDetails, IFieldResponse, ApplicationStatus } from '../types';
+import mongoose, { Document, Schema } from 'mongoose';
+import { ApplicationStatus, IApplication, IFieldResponse, IJobDetails } from '../types';
 
 // Job Details schema
 const JobDetailsSchema = new Schema<IJobDetails>({

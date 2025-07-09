@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
 import aiService from '../services/aiService';
-import { IAuthRequest, IApiResponse, ICoverLetterRequest } from '../types';
+import { IApiResponse, IAuthRequest, ICoverLetterRequest } from '../types';
 
 // @desc    Analyze job posting
 // @route   POST /api/ai/analyze-job

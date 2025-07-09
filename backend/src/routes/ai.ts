@@ -1,10 +1,10 @@
 import express from 'express';
 import { body } from 'express-validator';
 import {
-  analyzeJob,
-  generateResponse,
-  generateCoverLetter,
-  optimizeResponse,
+    analyzeJob,
+    generateCoverLetter,
+    generateResponse,
+    optimizeResponse,
 } from '../controllers/aiController';
 import { authenticate } from '../middleware/auth';
 

@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { IJobAnalysis, IAIResponse, ICoverLetterRequest, IUserProfile, IJobDetails } from '../types';
+import { IAIResponse, ICoverLetterRequest, IJobAnalysis, IUserProfile } from '../types';
 
 class AIService {
   private openai: OpenAI;

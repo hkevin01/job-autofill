@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
 import Application from '../models/Application';
-import { IAuthRequest, IApiResponse, IPaginatedResponse } from '../types';
+import { IApiResponse, IAuthRequest, IPaginatedResponse } from '../types';
 
 // @desc    Get user applications
 // @route   GET /api/applications

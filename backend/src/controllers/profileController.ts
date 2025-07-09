@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
 import User from '../models/User';
-import { IAuthRequest, IApiResponse } from '../types';
+import { IApiResponse, IAuthRequest } from '../types';
 
 // @desc    Get user profile
 // @route   GET /api/profile

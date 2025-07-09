@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
-import { IAuthRequest, IApiResponse } from '../types';
+import { IApiResponse, IAuthRequest } from '../types';
 
 export const authenticate = async (
   req: IAuthRequest,

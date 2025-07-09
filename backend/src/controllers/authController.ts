@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
-import { IAuthRequest, ILoginRequest, IRegisterRequest, IAuthResponse, IApiResponse } from '../types';
+import { IApiResponse, IAuthRequest, IAuthResponse, ILoginRequest, IRegisterRequest } from '../types';
 
 // Generate JWT token
 const generateToken = (userId: string): string => {

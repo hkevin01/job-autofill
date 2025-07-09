@@ -1,15 +1,15 @@
 import express from 'express';
 import { body, param } from 'express-validator';
 import {
-  getProfile,
-  updateProfile,
-  addExperience,
-  updateExperience,
-  deleteExperience,
-  addEducation,
-  updateEducation,
-  deleteEducation,
-  updateSkills,
+    addEducation,
+    addExperience,
+    deleteEducation,
+    deleteExperience,
+    getProfile,
+    updateEducation,
+    updateExperience,
+    updateProfile,
+    updateSkills,
 } from '../controllers/profileController';
 import { authenticate } from '../middleware/auth';
 

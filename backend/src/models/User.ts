@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { IUser, IUserProfile, IPersonalInfo, IAddress, IExperience, IEducation, IPreferences } from '../types';
+import mongoose, { Document, Schema } from 'mongoose';
+import { IAddress, IEducation, IExperience, IPersonalInfo, IPreferences, IUser, IUserProfile } from '../types';
 
 // Address schema
 const AddressSchema = new Schema<IAddress>({
