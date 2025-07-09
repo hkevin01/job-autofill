@@ -216,13 +216,13 @@ async function analyzeCurrentPage() {
     // Get current active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    if (!tab) {
+    if (!tab || !tab.id) {
       showError('Unable to access current tab');
       return;
     }
     
     // Send message to content script to analyze page
-    const response = await chrome.tabs.sendMessage(tab.id, { 
+    const response: any = await chrome.tabs.sendMessage(tab.id, { 
       type: 'ANALYZE_PAGE' 
     });
     
@@ -289,7 +289,11 @@ async function handleAutoFill() {
     
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    const response = await chrome.tabs.sendMessage(tab.id, { 
+    if (!tab || !tab.id) {
+      throw new Error('Unable to access current tab');
+    }
+    
+    const response: any = await chrome.tabs.sendMessage(tab.id, { 
       type: 'AUTO_FILL_FORMS' 
     });
     
@@ -321,7 +325,11 @@ async function handleSaveApplication() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    const response = await chrome.tabs.sendMessage(tab.id, { 
+    if (!tab || !tab.id) {
+      throw new Error('Unable to access current tab');
+    }
+    
+    const response: any = await chrome.tabs.sendMessage(tab.id, { 
       type: 'SAVE_APPLICATION' 
     });
     
@@ -348,10 +356,12 @@ async function handleAutoFillToggle() {
     
     // Send message to content script
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.tabs.sendMessage(tab.id, { 
-      type: 'SETTINGS_UPDATED',
-      data: newSettings
-    });
+    if (tab && tab.id) {
+      chrome.tabs.sendMessage(tab.id, { 
+        type: 'SETTINGS_UPDATED',
+        data: newSettings
+      });
+    }
   } catch (error) {
     console.error('Error updating auto-fill setting:', error);
   }

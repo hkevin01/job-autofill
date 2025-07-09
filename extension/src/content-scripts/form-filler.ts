@@ -612,8 +612,8 @@ class EnhancedFormFiller {
     // Try multiple ways to get field label
     const id = element.getAttribute('id');
     if (id) {
-      const label = document.querySelector(`label[for="${id}"]`);
-      if (label) return label.textContent?.trim() || '';
+      const labelElement = document.querySelector(`label[for="${id}"]`);
+      if (labelElement) return labelElement.textContent?.trim() || '';
     }
 
     // Look for parent label
@@ -625,6 +625,16 @@ class EnhancedFormFiller {
     if (previousSibling && previousSibling.tagName === 'LABEL') {
       return previousSibling.textContent?.trim() || '';
     }
+
+    // Check placeholder or name as fallback
+    const placeholder = element.getAttribute('placeholder');
+    if (placeholder) return placeholder;
+
+    const name = element.getAttribute('name');
+    if (name) return name;
+
+    return '';
+  }
 
     // Use placeholder or name as fallback
     return element.getAttribute('placeholder') || 
