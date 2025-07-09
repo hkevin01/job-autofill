@@ -16,7 +16,7 @@
 
 ## 🚀 Overview
 
-Job AutoFill is an intelligent browser extension that revolutionizes the job application process by automatically filling out forms with AI-powered, personalized responses. Similar to JobRight, it analyzes job postings and tailors your application materials to match specific requirements while maintaining your authentic professional voice.
+Job AutoFill is an intelligent browser extension that revolutionizes the job application process by automatically filling out forms with AI-powered, personalized responses. It analyzes job postings and tailors your application materials to match specific requirements while maintaining your authentic professional voice.
 
 ## ✨ Features
 

@@ -1,7 +1,7 @@
 # Job AutoFill - AI-Powered Application Assistant
 
 ## Project Overview
-An intelligent browser extension that automatically fills out job applications using AI technology, similar to JobRight. The system will analyze job postings, extract relevant information, and populate application forms with personalized responses based on user's profile and experience.
+An intelligent browser extension that automatically fills out job applications using AI technology. The system will analyze job postings, extract relevant information, and populate application forms with personalized responses based on user's profile and experience.
 
 ## Core Features
 - **Browser Extension**: Chrome/Firefox extension for seamless integration
