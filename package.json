@@ -1,0 +1,38 @@
+{
+  "name": "job-autofill",
+  "version": "1.0.0",
+  "description": "AI-powered job application auto-fill browser extension",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:extension && npm run build:backend",
+    "build:extension": "cd extension && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "dev": "concurrently \"npm run dev:extension\" \"npm run dev:backend\"",
+    "dev:extension": "cd extension && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "test": "npm run test:extension && npm run test:backend",
+    "test:extension": "cd extension && npm test",
+    "test:backend": "cd backend && npm test",
+    "lint": "eslint . --ext .js,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.ts,.tsx --fix"
+  },
+  "keywords": [
+    "job-application",
+    "automation",
+    "ai",
+    "browser-extension",
+    "form-filling"
+  ],
+  "author": "Kevin",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0"
+  },
+  "workspaces": [
+    "extension",
+    "backend"
+  ]
+}
