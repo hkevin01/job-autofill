@@ -49,6 +49,7 @@ module.exports = {
     }),
   ],
   optimization: {
+    minimize: true,
     splitChunks: {
       chunks: 'all',
       cacheGroups: {
@@ -57,7 +58,20 @@ module.exports = {
           name: 'api-service',
           chunks: 'all',
         },
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+          minSize: 0,
+        },
       },
     },
+    usedExports: true,
+    sideEffects: false,
+  },
+  performance: {
+    maxAssetSize: 50000,
+    maxEntrypointSize: 50000,
+    hints: 'warning',
   },
 };

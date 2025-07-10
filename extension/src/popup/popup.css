@@ -53,6 +53,10 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .status-dot {
@@ -64,8 +68,17 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.status-dot.error {
+  background: #ef4444;
+}
+
+.status-dot.warning {
+  background: #f59e0b;
 }
 
 .status-text {
@@ -82,6 +95,11 @@ body {
 .section {
   padding: 16px;
   border-bottom: 1px solid #e5e7eb;
+  animation: slideIn 0.3s ease;
+}
+
+.section:nth-child(even) {
+  animation-delay: 0.1s;
 }
 
 .section:last-child {
@@ -107,6 +125,10 @@ body {
   gap: 8px;
   padding: 20px;
   color: #6b7280;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
 }
 
 .spinner {
@@ -264,6 +286,16 @@ body {
 
 .metric {
   text-align: center;
+  background: linear-gradient(145deg, #ffffff, #f0f9ff);
+  border: 1px solid #e0f2fe;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0ea5e9;
 }
 
 .metric-value {
@@ -460,11 +492,251 @@ body {
 }
 
 /* Animations */
-.fade-in {
-  animation: fadeIn 0.3s ease-in;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Loading States */
+.loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin: 4px 0;
+}
+
+.skeleton-button {
+  height: 36px;
+  width: 100%;
+  margin: 8px 0;
+}
+
+/* Enhanced Focus States */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Improved Hover Effects */
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  transition: all 0.1s ease;
+}
+
+/* Enhanced Status Indicators */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.error {
+  background: #ef4444;
+}
+
+.status-dot.warning {
+  background: #f59e0b;
+}
+
+/* Improved Section Animations */
+.section {
+  animation: slideIn 0.3s ease;
+}
+
+.section:nth-child(even) {
+  animation-delay: 0.1s;
+}
+
+/* Enhanced Analytics Cards */
+.metric {
+  background: linear-gradient(145deg, #ffffff, #f0f9ff);
+  border: 1px solid #e0f2fe;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0ea5e9;
+}
+
+/* Improved Form Elements */
+.form-group {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 14px;
+  color: #6b7280;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus + .form-label,
+.form-input:not(:placeholder-shown) + .form-label {
+  top: -8px;
+  left: 8px;
+  font-size: 12px;
+  color: #667eea;
+  background: white;
+  padding: 0 4px;
+}
+
+/* Enhanced Progress Indicators */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Tooltip Styles */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+/* Improved Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a202c;
+    color: #e2e8f0;
+  }
+  
+  .section {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .form-input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+  
+  .metric {
+    background: linear-gradient(145deg, #2d3748, #1a202c);
+    border-color: #4a5568;
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .btn {
+    border: 2px solid currentColor;
+  }
+  
+  .status-dot {
+    border: 2px solid currentColor;
+  }
 }

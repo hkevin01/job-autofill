@@ -2,10 +2,7 @@ import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import mongoose from 'mongoose';
-import morgan from 'morgan';
 
 // Import routes
 import aiRoutes from './routes/ai';
@@ -17,6 +14,15 @@ import templateRoutes from './routes/templates';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import {
+    checkBlacklistedToken,
+    generalLimiter,
+    requestLogger,
+    sanitizeInput,
+    corsOptions as securityCorsOptions,
+    securityHeaders,
+    validateContentType
+} from './middleware/security';
 
 // Load environment variables
 dotenv.config();
@@ -37,55 +43,22 @@ const connectDB = async () => {
 };
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Replaced with security middleware
 
 // CORS configuration
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: Function) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-      'http://localhost:3000',
-      'chrome-extension://'
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is allowed or if it's a chrome extension
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
+// Replaced with security middleware
 
 // Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https://api.openai.com"],
-    },
-  },
-}));
-app.use(cors(corsOptions));
+app.use(securityHeaders);
+app.use(cors(securityCorsOptions));
 app.use(compression());
-app.use(morgan('combined'));
+app.use(requestLogger);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(limiter);
+app.use(validateContentType);
+app.use(sanitizeInput);
+app.use(checkBlacklistedToken);
+app.use(generalLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -149,7 +122,7 @@ process.on('uncaughtException', (err: Error) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM received, shutting down gracefully');
-  mongoose.connection.close(() => {
+  mongoose.connection.close().then(() => {
     console.log('📦 MongoDB connection closed');
     process.exit(0);
   });
