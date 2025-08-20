@@ -6,7 +6,6 @@
   "permissions": ["activeTab", "storage", "scripting", "notifications"],
   "host_permissions": [
     "*://*.greenhouse.io/*",
-    "*://*.lever.co/*",
     "*://jobs.lever.co/*",
     "*://*.workday.com/*",
     "*://*.myworkdayjobs.com/*",
@@ -36,7 +35,6 @@
     {
       "matches": [
         "*://*.greenhouse.io/*",
-        "*://*.lever.co/*",
         "*://jobs.lever.co/*",
         "*://*.workday.com/*",
         "*://*.myworkdayjobs.com/*",
@@ -92,7 +90,6 @@
       "resources": ["assets/*"],
       "matches": [
         "*://*.greenhouse.io/*",
-        "*://*.lever.co/*",
         "*://jobs.lever.co/*",
         "*://*.workday.com/*",
         "*://*.myworkdayjobs.com/*",
