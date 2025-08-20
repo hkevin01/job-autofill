@@ -1,765 +1,452 @@
-// Form detector content script
+/**
+ * Job AutoFill - Enhanced Form Detector
+ * Detects job application forms with confidence scoring and ATS platform support
+ */
 
-// Declare chrome for content script
-declare const chrome: any;
+import { 
+  isElementInteractable, 
+  getElementLabel, 
+  calculateFieldConfidence, 
+  createDebugInfo,
+  debounce,
+  highlightElement,
+  addTooltip
+} from './utils';
+import { atsDetector, FieldMapping, ATSPlatform } from './ats-adapters';
 
-console.log('Job AutoFill form detector loaded');
+console.log('Job AutoFill Enhanced Form Detector loaded');
 
-// Common job application form selectors
-const FORM_SELECTORS = {
-  // Common form containers
-  forms: 'form',
-
-  // Personal information fields
-  firstName: [
-    'input[name*="first"]',
-    'input[name*="fname"]',
-    'input[id*="first"]',
-    'input[placeholder*="first" i]'
-  ],
-  lastName: [
-    'input[name*="last"]',
-    'input[name*="lname"]',
-    'input[id*="last"]',
-    'input[placeholder*="last" i]'
-  ],
-  email: [
-    'input[type="email"]',
-    'input[name*="email"]',
-    'input[id*="email"]'
-  ],
-  phone: [
-    'input[type="tel"]',
-    'input[name*="phone"]',
-    'input[id*="phone"]',
-    'input[name*="mobile"]'
-  ],
-
-  // Address fields
-  address: [
-    'input[name*="address"]',
-    'input[id*="address"]',
-    'textarea[name*="address"]'
-  ],
-  city: [
-    'input[name*="city"]',
-    'input[id*="city"]'
-  ],
-  state: [
-    'select[name*="state"]',
-    'select[id*="state"]',
-    'input[name*="state"]'
-  ],
-  zipCode: [
-    'input[name*="zip"]',
-    'input[name*="postal"]',
-    'input[id*="zip"]'
-  ],
-
-  // Professional fields
-  resume: [
-    'input[type="file"][name*="resume"]',
-    'input[type="file"][name*="cv"]',
-    'input[type="file"][id*="resume"]'
-  ],
-  coverLetter: [
-    'textarea[name*="cover"]',
-    'textarea[name*="letter"]',
-    'textarea[id*="cover"]'
-  ],
-  experience: [
-    'textarea[name*="experience"]',
-    'textarea[name*="background"]',
-    'textarea[id*="experience"]'
-  ],
-  skills: [
-    'textarea[name*="skill"]',
-    'textarea[id*="skill"]',
-    'input[name*="skill"]'
-  ],
-
-  // Common question fields
-  whyInterested: [
-    'textarea[name*="why"]',
-    'textarea[name*="interest"]',
-    'textarea[name*="motivation"]'
-  ],
-  availability: [
-    'input[name*="available"]',
-    'input[name*="start"]',
-    'select[name*="available"]'
-  ]
-};
-
-// Job board specific patterns
-const JOB_BOARDS = {
-  linkedin: 'linkedin.com',
-  indeed: 'indeed.com',
-  glassdoor: 'glassdoor.com',
-  monster: 'monster.com',
-  ziprecruiter: 'ziprecruiter.com',
-  dice: 'dice.com',
-  careerbuilder: 'careerbuilder.com'
-};
-
-interface FormField {
+export interface DetectedField {
   element: HTMLElement;
-  type: string;
   fieldType: string;
-  selector: string;
+  confidence: number;
+  detectionMethod: string[];
+  platform?: string;
+  label?: string;
+  selector?: string;
   value?: string;
 }
 
-interface DetectedForm {
-  form: HTMLFormElement;
-  fields: FormField[];
-  jobBoard?: string;
+export interface DetectedForm {
+  form: HTMLFormElement | Document;
+  fields: DetectedField[];
+  platform: string;
+  confidence: number;
   url: string;
   title?: string;
+  isJobApplication: boolean;
+  debugInfo?: any;
 }
 
-class FormDetector {
+export interface FormDetectorOptions {
+  enableDebug?: boolean;
+  minConfidence?: number;
+  highlightFields?: boolean;
+  includeHiddenFields?: boolean;
+}
+
+const FIELD_PATTERNS: Record<string, RegExp[]> = {
+  firstName: [/first.*name/i, /given.*name/i, /fname/i],
+  lastName: [/last.*name/i, /family.*name/i, /surname/i, /lname/i],
+  fullName: [/^name$/i, /full.*name/i, /complete.*name/i],
+  email: [/email/i, /e.?mail/i, /mail.*address/i],
+  phone: [/phone/i, /mobile/i, /telephone/i, /contact.*number/i],
+  address: [/address/i, /street/i, /location/i],
+  city: [/city/i, /town/i, /municipality/i],
+  state: [/state/i, /province/i, /region/i],
+  zipCode: [/zip/i, /postal/i, /post.*code/i],
+  country: [/country/i, /nation/i],
+  resume: [/resume/i, /cv/i, /curriculum.*vitae/i],
+  coverLetter: [/cover.*letter/i, /motivation.*letter/i],
+  linkedin: [/linkedin/i, /linked.?in/i],
+  github: [/github/i, /git.*hub/i],
+  website: [/website/i, /portfolio/i, /personal.*site/i],
+  salary: [/salary/i, /compensation/i, /expected.*salary/i],
+  availability: [/availability/i, /start.*date/i, /available/i],
+  experience: [/experience/i, /background/i, /work.*history/i],
+  skills: [/skills/i, /competencies/i, /expertise/i],
+  whyInterested: [/why.*interested/i, /why.*apply/i, /motivation/i],
+  additionalInfo: [/additional.*info/i, /other.*info/i, /comments/i]
+};
+
+const JOB_APPLICATION_PATTERNS = [
+  /job.*application/i,
+  /apply.*job/i,
+  /application.*form/i,
+  /career.*form/i,
+  /employment.*form/i,
+  /join.*team/i,
+  /submit.*application/i
+];
+
+export class EnhancedFormDetector {
   private detectedForms: DetectedForm[] = [];
   private observer: MutationObserver;
+  private options: FormDetectorOptions;
+  private debouncedScan: () => void;
 
-  constructor() {
+  constructor(options: FormDetectorOptions = {}) {
+    this.options = {
+      enableDebug: true,
+      minConfidence: 0.3,
+      highlightFields: false,
+      includeHiddenFields: false,
+      ...options
+    };
+
+    this.debouncedScan = debounce(() => this.scanForForms(), 1000);
     this.observer = new MutationObserver(this.handleMutations.bind(this));
     this.init();
   }
 
-  init() {
-    // Initial scan
+  private init(): void {
     this.scanForForms();
-
-    // Set up observer for dynamic content
     this.observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class', 'id']
+      attributeFilter: ['class', 'id', 'name', 'data-qa', 'data-testid']
     });
 
-    // Scan again after page load
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => this.scanForForms(), 1000);
       });
+    } else {
+      setTimeout(() => this.scanForForms(), 500);
     }
+
+    let lastUrl = location.href;
+    const checkUrl = () => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        atsDetector.reset();
+        setTimeout(() => this.scanForForms(), 1000);
+      }
+    };
+    setInterval(checkUrl, 1000);
   }
 
-  handleMutations(mutations: MutationRecord[]) {
+  private handleMutations(mutations: MutationRecord[]): void {
     let shouldRescan = false;
 
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
-        const addedNodes = Array.from(mutation.addedNodes);
-        if (addedNodes.some(node =>
-          node.nodeType === Node.ELEMENT_NODE &&
-          (node as Element).tagName === 'FORM'
-        )) {
-          shouldRescan = true;
-          break;
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as Element;
+            if (element.matches('form, input, textarea, select') ||
+                element.querySelector('form, input, textarea, select')) {
+              shouldRescan = true;
+              break;
+            }
+          }
         }
       }
+      if (shouldRescan) break;
     }
 
     if (shouldRescan) {
-      // Debounce rescanning
-      setTimeout(() => this.scanForForms(), 500);
+      this.debouncedScan();
     }
   }
 
-  scanForForms() {
-    const forms = document.querySelectorAll('form');
-    const newForms: DetectedForm[] = [];
+  public scanForForms(): DetectedForm[] {
+    console.log('🔍 Scanning for job application forms...');
+    this.detectedForms = [];
 
-    forms.forEach(form => {
-      if (this.isJobApplicationForm(form)) {
-        const detectedForm = this.analyzeForm(form);
-        if (detectedForm && detectedForm.fields.length > 0) {
-          newForms.push(detectedForm);
-        }
+    const platform = atsDetector.detectPlatform();
+    const atsFields = atsDetector.detectFields();
+    const detectedFields = this.convertATSFields(atsFields);
+
+    if (detectedFields.length < 3) {
+      const genericFields = this.genericFormDetection();
+      detectedFields.push(...genericFields);
+    }
+
+    const uniqueFields = this.deduplicateFields(detectedFields);
+    const highConfidenceFields = uniqueFields.filter(f => f.confidence >= this.options.minConfidence!);
+
+    if (highConfidenceFields.length > 0) {
+      const formContainer = this.findFormContainer(highConfidenceFields);
+      const isJobApp = this.isJobApplicationForm(formContainer, highConfidenceFields);
+      
+      const detectedForm: DetectedForm = {
+        form: formContainer,
+        fields: highConfidenceFields,
+        platform: platform.name,
+        confidence: this.calculateFormConfidence(highConfidenceFields),
+        url: window.location.href,
+        title: document.title,
+        isJobApplication: isJobApp,
+        debugInfo: this.options.enableDebug ? this.generateDebugInfo(highConfidenceFields, platform) : undefined
+      };
+
+      this.detectedForms = [detectedForm];
+
+      if (this.options.highlightFields) {
+        this.highlightDetectedFields(highConfidenceFields);
       }
-    });
 
-    // Check if we found new forms
-    if (newForms.length > this.detectedForms.length) {
-      this.detectedForms = newForms;
-      this.notifyFormDetected(newForms);
-    }
-  }
-
-  isJobApplicationForm(form: HTMLFormElement): boolean {
-    const formText = form.textContent?.toLowerCase() || '';
-    const formHTML = form.innerHTML.toLowerCase();
-
-    // Keywords that indicate job application
-    const jobKeywords = [
-      'apply', 'application', 'resume', 'cv', 'cover letter',
-      'experience', 'skills', 'employment', 'career', 'job',
-      'position', 'candidate', 'submit application'
-    ];
-
-    // Check for job-related keywords
-    const hasJobKeywords = jobKeywords.some(keyword =>
-      formText.includes(keyword) || formHTML.includes(keyword)
-    );
-
-    // Check for typical application form fields
-    const hasApplicationFields = this.hasApplicationFields(form);
-
-    // Check URL for job board patterns
-    const isJobBoard = this.detectJobBoard() !== null;
-
-    return hasJobKeywords || hasApplicationFields || isJobBoard;
-  }
-
-  hasApplicationFields(form: HTMLFormElement): boolean {
-    const inputs = form.querySelectorAll('input, textarea, select');
-    let fieldCount = 0;
-
-    inputs.forEach(input => {
-      const name = input.getAttribute('name')?.toLowerCase() || '';
-      const id = input.getAttribute('id')?.toLowerCase() || '';
-      const placeholder = input.getAttribute('placeholder')?.toLowerCase() || '';
-
-      const isApplicationField = [
-        'first', 'last', 'name', 'email', 'phone', 'resume',
-        'cover', 'experience', 'skill', 'address', 'city'
-      ].some(term =>
-        name.includes(term) || id.includes(term) || placeholder.includes(term)
-      );
-
-      if (isApplicationField) fieldCount++;
-    });
-
-    return fieldCount >= 3; // Require at least 3 application-related fields
-  }
-
-  analyzeForm(form: HTMLFormElement): DetectedForm | null {
-    const fields: FormField[] = [];
-    const inputs = form.querySelectorAll('input, textarea, select');
-
-    inputs.forEach(input => {
-      const fieldType = this.identifyFieldType(input as HTMLElement);
-      if (fieldType) {
-        fields.push({
-          element: input as HTMLElement,
-          type: input.tagName.toLowerCase(),
-          fieldType,
-          selector: this.generateSelector(input as HTMLElement),
-          value: (input as HTMLInputElement).value
-        });
-      }
-    });
-
-    if (fields.length === 0) return null;
-
-    const jobBoard = this.detectJobBoard();
-
-    return {
-      form,
-      fields,
-      jobBoard: jobBoard || undefined,
-      url: window.location.href,
-      title: document.title
-    };
-  }
-
-  identifyFieldType(element: HTMLElement): string | null {
-    const name = element.getAttribute('name')?.toLowerCase() || '';
-    const id = element.getAttribute('id')?.toLowerCase() || '';
-    const placeholder = element.getAttribute('placeholder')?.toLowerCase() || '';
-    const type = element.getAttribute('type')?.toLowerCase() || '';
-
-    // Check each field type
-    for (const [fieldType, selectors] of Object.entries(FORM_SELECTORS)) {
-      if (fieldType === 'forms') continue;
-
-      // Ensure selectors is an array
-      const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
-
-      // Check if element matches any selector for this field type
-      const matches = selectorArray.some((selector: string) => {
-        try {
-          return element.matches(selector);
-        } catch {
-          return false;
-        }
-      });
-
-      if (matches) return fieldType;
-
-      // Also check name, id, placeholder for keywords
-      if (name.includes(fieldType) || id.includes(fieldType) || placeholder.includes(fieldType)) {
-        return fieldType;
-      }
+      console.log(`✅ Detected job application form with ${highConfidenceFields.length} fields`);
     }
 
-    // Special type checking
-    if (type === 'email') return 'email';
-    if (type === 'tel') return 'phone';
-    if (type === 'file') return 'resume';
-
-    return null;
-  }
-
-  generateSelector(element: HTMLElement): string {
-    // Try to generate a unique selector
-    if (element.id) {
-      return `#${element.id}`;
-    }
-
-    if (element.getAttribute('name')) {
-      return `${element.tagName.toLowerCase()}[name="${element.getAttribute('name')}"]`;
-    }
-
-    // Fall back to position-based selector
-    const siblings = Array.from(element.parentElement?.children || []);
-    const index = siblings.indexOf(element);
-    const tag = element.tagName.toLowerCase();
-
-    return `${tag}:nth-child(${index + 1})`;
-  }
-
-  detectJobBoard(): string | null {
-    const hostname = window.location.hostname;
-
-    for (const [board, pattern] of Object.entries(JOB_BOARDS)) {
-      if (hostname.includes(pattern)) {
-        return board;
-      }
-    }
-
-    return null;
-  }
-
-  notifyFormDetected(forms: DetectedForm[]) {
-    console.log('Job application forms detected:', forms);
-
-    // Send message to background script
-    chrome.runtime.sendMessage({
-      type: 'FORM_DETECTED',
-      data: {
-        forms: forms.map(form => ({
-          fields: form.fields.map(field => ({
-            fieldType: field.fieldType,
-            type: field.type,
-            selector: field.selector,
-            value: field.value
-          })),
-          jobBoard: form.jobBoard,
-          url: form.url,
-          title: form.title
-        })),
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    // Add visual indicator
-    this.addFormIndicators(forms);
-  }
-
-  addFormIndicators(forms: DetectedForm[]) {
-    forms.forEach(detectedForm => {
-      // Add a small indicator to show the form was detected
-      const indicator = document.createElement('div');
-      indicator.id = 'job-autofill-indicator';
-      indicator.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: #4CAF50;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        z-index: 10000;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        font-family: Arial, sans-serif;
-      `;
-      indicator.textContent = '✓ Job Application Detected';
-
-      document.body.appendChild(indicator);
-
-      // Remove indicator after 3 seconds
-      setTimeout(() => {
-        indicator.remove();
-      }, 3000);
-    });
-  }
-
-  getDetectedForms(): DetectedForm[] {
+    this.exportDebugInfo();
     return this.detectedForms;
   }
-}
 
-// Initialize form detector
-const formDetector = new FormDetector();
-
-// Listen for messages from popup/background
-chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
-  switch (message.type) {
-    case 'GET_DETECTED_FORMS':
-      sendResponse({
-        success: true,
-        data: formDetector.getDetectedForms()
-      });
-      break;
-
-    case 'SCAN_FORMS':
-      formDetector.scanForForms();
-      sendResponse({ success: true });
-      break;
-
-    default:
-      console.warn('Unknown message type:', message.type);
-  }
-});
-
-// Export for testing
-(window as any).jobAutofillFormDetector = formDetector;
-
-// Import job board detection
-import { JobBoard, JobBoardDetector } from './job-board-detector';
-
-// Enhanced form detector with multi-platform support
-class EnhancedFormDetector {
-  private jobBoardDetector: JobBoardDetector;
-  private detectedForms: Map<string, HTMLFormElement> = new Map();
-  private fieldMapping: Map<string, HTMLInputElement> = new Map();
-  private fieldConfidence: Map<string, number> = new Map();
-  private debugOverlayEnabled = false;
-
-  constructor() {
-    this.jobBoardDetector = new JobBoardDetector();
-    this.initializeDetection();
+  private convertATSFields(atsFields: FieldMapping[]): DetectedField[] {
+    return atsFields.map(mapping => ({
+      element: mapping.element as HTMLElement,
+      fieldType: mapping.fieldType,
+      confidence: mapping.confidence,
+      detectionMethod: mapping.detectionReason,
+      platform: mapping.platform,
+      label: getElementLabel(mapping.element),
+      selector: this.generateElementSelector(mapping.element)
+    }));
   }
 
-  private initializeDetection(): void {
-    this.detectForms();
-    this.setupMutationObserver();
-    this.notifyExtension();
-  }
+  private genericFormDetection(): DetectedField[] {
+    const fields: DetectedField[] = [];
+    const allInputs = document.querySelectorAll('input, textarea, select');
 
-  private detectForms(): void {
-    const currentBoard = this.jobBoardDetector.getCurrentBoard();
-
-    if (currentBoard) {
-      this.detectPlatformSpecificForms(currentBoard);
-    }
-
-    this.detectGenericForms();
-  this.detectFormsInIframes();
-    this.mapFormFields();
-  }
-
-  private detectPlatformSpecificForms(board: JobBoard): void {
-    // Use platform-specific selectors
-    for (const selector of board.selectors.applicationForm) {
-      const forms = document.querySelectorAll(selector) as NodeListOf<HTMLFormElement>;
-      forms.forEach((form, index) => {
-        const formId = `${board.name.toLowerCase()}_form_${index}`;
-        this.detectedForms.set(formId, form);
-        console.log(`✅ Detected ${board.name} application form:`, formId);
-      });
-    }
-  }
-
-  private detectGenericForms(): void {
-    // Fallback generic form detection
-    const forms = document.querySelectorAll('form') as NodeListOf<HTMLFormElement>;
-    forms.forEach((form, index) => {
-      if (this.isJobApplicationForm(form)) {
-        const formId = `generic_form_${index}`;
-        if (!Array.from(this.detectedForms.values()).includes(form)) {
-          this.detectedForms.set(formId, form);
-          console.log(`✅ Detected generic application form:`, formId);
-        }
+    for (const element of Array.from(allInputs)) {
+      if (!isElementInteractable(element) && !this.options.includeHiddenFields) {
+        continue;
       }
-    });
-  }
 
-  private detectFormsInIframes(): void {
-    const iframes = Array.from(document.querySelectorAll('iframe')) as HTMLIFrameElement[];
-    iframes.forEach((frame, idx) => {
-      try {
-        const doc = frame.contentDocument || frame.contentWindow?.document;
-        if (!doc) return;
-        const forms = doc.querySelectorAll('form') as unknown as NodeListOf<HTMLFormElement>;
-        forms.forEach((form, fIdx) => {
-          if (this.isJobApplicationForm(form)) {
-            const formId = `iframe_${idx}_form_${fIdx}`;
-            if (!Array.from(this.detectedForms.values()).includes(form)) {
-              this.detectedForms.set(formId, form);
-              console.log(`✅ Detected application form inside iframe:`, formId);
-            }
-          }
-        });
-      } catch {
-        // Cross-origin frame, ignore
-      }
-    });
-  }
+      const fieldType = this.detectFieldType(element);
+      if (fieldType) {
+        const detectionMethod = this.getDetectionMethod(element, fieldType);
+        const confidence = calculateFieldConfidence(element, fieldType, detectionMethod);
 
-  private isJobApplicationForm(form: HTMLFormElement): boolean {
-    const formText = form.textContent?.toLowerCase() || '';
-    const formHTML = form.innerHTML.toLowerCase();
-
-    const jobKeywords = [
-      'application', 'apply', 'resume', 'cv', 'cover letter',
-      'experience', 'education', 'skills', 'employment',
-      'job', 'position', 'career', 'hire', 'interview'
-    ];
-
-    const personalInfoFields = [
-      'first name', 'last name', 'email', 'phone',
-      'address', 'city', 'state', 'zip'
-    ];
-
-    const hasJobKeywords = jobKeywords.some(keyword =>
-      formText.includes(keyword) || formHTML.includes(keyword)
-    );
-
-    const hasPersonalFields = personalInfoFields.some(field =>
-      formText.includes(field) || formHTML.includes(field)
-    );
-
-    // Check for file upload inputs (resume/CV)
-    const hasFileUpload = form.querySelector('input[type="file"]') !== null;
-
-    // Check for common application form attributes
-    const hasApplicationAttributes = form.getAttribute('action')?.toLowerCase().includes('apply') ||
-                                   form.getAttribute('id')?.toLowerCase().includes('apply') ||
-                                   form.getAttribute('class')?.toLowerCase().includes('apply') ||
-                                   false;
-
-    return (hasJobKeywords && hasPersonalFields) || hasFileUpload || hasApplicationAttributes;
-  }
-
-  private mapFormFields(): void {
-    const currentBoard = this.jobBoardDetector.getCurrentBoard();
-
-    this.detectedForms.forEach((form, formId) => {
-      this.mapFieldsInForm(form, currentBoard);
-    });
-  }
-
-  private mapFieldsInForm(form: HTMLFormElement, board: JobBoard | null): void {
-    const selectors = board ? { ...FORM_SELECTORS, ...board.selectors } : FORM_SELECTORS;
-
-    // Map standard fields
-    this.mapField(form, 'firstName', selectors.firstName || FORM_SELECTORS.firstName);
-    this.mapField(form, 'lastName', selectors.lastName || FORM_SELECTORS.lastName);
-    this.mapField(form, 'email', selectors.email || FORM_SELECTORS.email);
-    this.mapField(form, 'phone', selectors.phone || FORM_SELECTORS.phone);
-
-    // Map platform-specific fields
-    if (board?.selectors.customFields) {
-      Object.entries(board.selectors.customFields).forEach(([fieldName, fieldSelectors]) => {
-        this.mapField(form, fieldName, fieldSelectors);
-      });
-    }
-  }
-
-  private mapField(form: HTMLFormElement, fieldName: string, selectors: string[]): void {
-    for (const selector of selectors) {
-      const field = form.querySelector(selector) as HTMLInputElement;
-      if (field) {
-        this.fieldMapping.set(fieldName, field);
-        this.fieldConfidence.set(fieldName, this.computeConfidence(field, selector, fieldName));
-        field.setAttribute('data-job-autofill', fieldName);
-        console.log(`🎯 Mapped field: ${fieldName} -> ${selector}`);
-  if (this.debugOverlayEnabled) this.decorateField(field);
-        break;
-      }
-    }
-  }
-
-  private computeConfidence(field: HTMLElement, selector: string, fieldName: string): number {
-    let score = 0;
-    const name = (field.getAttribute('name') || '').toLowerCase();
-    const id = (field.getAttribute('id') || '').toLowerCase();
-    const placeholder = (field.getAttribute('placeholder') || '').toLowerCase();
-
-    // Selector strength
-    if (selector.startsWith('#')) score += 0.6; // id match is strong
-    else if (selector.includes('[name=')) score += 0.4; // name match
-    else score += 0.2; // generic
-
-    // Keyword presence
-    const key = fieldName.toLowerCase();
-    if (name.includes(key)) score += 0.3;
-    if (id.includes(key)) score += 0.2;
-    if (placeholder.includes(key)) score += 0.2;
-
-    // Clamp 0..1
-    return Math.min(1, score);
-  }
-
-  private setupMutationObserver(): void {
-    const observer = new MutationObserver((mutations) => {
-      let shouldRedetect = false;
-
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as Element;
-              if (element.tagName === 'FORM' || element.querySelector('form')) {
-                shouldRedetect = true;
-              }
-            }
+        if (confidence >= this.options.minConfidence!) {
+          fields.push({
+            element: element as HTMLElement,
+            fieldType,
+            confidence,
+            detectionMethod,
+            platform: 'Generic',
+            label: getElementLabel(element),
+            selector: this.generateElementSelector(element)
           });
         }
-      });
-
-      if (shouldRedetect) {
-        console.log('🔄 DOM changed, re-detecting forms...');
-        this.detectForms();
-        this.notifyExtension();
       }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  private notifyExtension(): void {
-    const currentBoard = this.jobBoardDetector.getCurrentBoard();
-    const formData = {
-      platform: currentBoard?.name || 'Generic',
-      formsDetected: this.detectedForms.size,
-      fieldsDetected: this.fieldMapping.size,
-      features: currentBoard?.features || {},
-      jobDetails: this.jobBoardDetector.getJobDetails(),
-      fields: Array.from(this.fieldMapping.keys()),
-  confidences: Object.fromEntries(this.fieldConfidence.entries()),
-      canQuickApply: this.jobBoardDetector.isQuickApplyAvailable(),
-      requiresAccount: this.jobBoardDetector.requiresAccount(),
-      isMultiStep: this.jobBoardDetector.hasMultiStepApplication()
-    };
-
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({
-        type: 'FORMS_DETECTED',
-        data: formData
-      }).catch(() => {
-        // Ignore errors if extension context is not available
-      });
     }
 
-    // Store in window for popup access
-    (window as any).jobAutoFillData = formData;
+    return fields;
   }
 
-  public getDetectedForms(): Map<string, HTMLFormElement> {
+  private detectFieldType(element: Element): string | null {
+    const attributes = this.getElementAttributes(element);
+    const textContent = this.getElementTextContent(element);
+
+    for (const [fieldType, patterns] of Object.entries(FIELD_PATTERNS)) {
+      for (const pattern of patterns) {
+        if (pattern.test(attributes) || pattern.test(textContent)) {
+          return fieldType;
+        }
+      }
+    }
+
+    if (element.tagName === 'INPUT' && element.getAttribute('type') === 'file') {
+      const accept = element.getAttribute('accept') || '';
+      if (accept.includes('pdf') || accept.includes('doc')) {
+        return 'resume';
+      }
+    }
+
+    return null;
+  }
+
+  private getElementAttributes(element: Element): string {
+    const attrs = ['name', 'id', 'class', 'placeholder', 'aria-label', 'data-qa', 'data-testid'];
+    return attrs
+      .map(attr => element.getAttribute(attr) || '')
+      .filter(val => val)
+      .join(' ')
+      .toLowerCase();
+  }
+
+  private getElementTextContent(element: Element): string {
+    const label = getElementLabel(element);
+    const title = element.getAttribute('title') || '';
+    return (label + ' ' + title).toLowerCase();
+  }
+
+  private getDetectionMethod(element: Element, fieldType: string): string[] {
+    const methods: string[] = [];
+    const patterns = FIELD_PATTERNS[fieldType] || [];
+
+    const name = element.getAttribute('name') || '';
+    const id = element.getAttribute('id') || '';
+    const placeholder = element.getAttribute('placeholder') || '';
+    const label = getElementLabel(element);
+
+    for (const pattern of patterns) {
+      if (pattern.test(name)) methods.push('name-match');
+      else if (pattern.test(id)) methods.push('id-match');
+      else if (pattern.test(placeholder)) methods.push('placeholder-match');
+      else if (pattern.test(label)) methods.push('label-match');
+    }
+
+    return methods.length ? methods : ['generic'];
+  }
+
+  private findFormContainer(fields: DetectedField[]): HTMLFormElement | Document {
+    const forms = new Set<HTMLFormElement>();
+    
+    for (const field of fields) {
+      const form = field.element.closest('form');
+      if (form) forms.add(form);
+    }
+
+    return forms.size === 1 ? Array.from(forms)[0] : document;
+  }
+
+  private isJobApplicationForm(container: HTMLFormElement | Document, fields: DetectedField[]): boolean {
+    const fieldTypes = new Set(fields.map(f => f.fieldType));
+    const hasPersonalInfo = fieldTypes.has('firstName') || fieldTypes.has('email') || fieldTypes.has('fullName');
+    const hasJobFields = fieldTypes.has('resume') || fieldTypes.has('coverLetter') || fieldTypes.has('experience');
+
+    if (hasPersonalInfo && hasJobFields) return true;
+
+    const containerText = container === document ? 
+      document.body.textContent || '' : 
+      container.textContent || '';
+
+    for (const pattern of JOB_APPLICATION_PATTERNS) {
+      if (pattern.test(containerText)) return true;
+    }
+
+    const url = window.location.href.toLowerCase();
+    const title = document.title.toLowerCase();
+    const jobKeywords = ['job', 'career', 'apply', 'application', 'position'];
+    
+    return jobKeywords.some(keyword => url.includes(keyword) || title.includes(keyword));
+  }
+
+  private calculateFormConfidence(fields: DetectedField[]): number {
+    if (fields.length === 0) return 0;
+    const avgConfidence = fields.reduce((sum, f) => sum + f.confidence, 0) / fields.length;
+    const fieldTypeBonus = Math.min(fields.length / 10, 0.2);
+    return Math.min(1, avgConfidence + fieldTypeBonus);
+  }
+
+  private deduplicateFields(fields: DetectedField[]): DetectedField[] {
+    const seen = new Set<Element>();
+    const unique: DetectedField[] = [];
+    const sorted = fields.sort((a, b) => b.confidence - a.confidence);
+
+    for (const field of sorted) {
+      if (!seen.has(field.element)) {
+        seen.add(field.element);
+        unique.push(field);
+      }
+    }
+
+    return unique;
+  }
+
+  private generateElementSelector(element: Element): string {
+    if (element.id) return `#${element.id}`;
+
+    const path: string[] = [];
+    let current: Element | null = element;
+
+    while (current && current.nodeType === Node.ELEMENT_NODE && path.length < 5) {
+      let selector = current.tagName.toLowerCase();
+      
+      if (current.className) {
+        const classes = current.className.split(' ').filter(c => c && !c.startsWith('css-'));
+        if (classes.length > 0) {
+          selector += '.' + classes.slice(0, 2).join('.');
+        }
+      }
+
+      path.unshift(selector);
+      current = current.parentElement;
+    }
+
+    return path.join(' > ');
+  }
+
+  private highlightDetectedFields(fields: DetectedField[]): void {
+    for (const field of fields) {
+      const confidenceLevel = field.confidence >= 0.7 ? 'success' : 
+                             field.confidence >= 0.5 ? 'warning' : 'error';
+      
+      highlightElement(field.element, confidenceLevel, 2000);
+      
+      if (this.options.enableDebug) {
+        addTooltip(
+          field.element, 
+          `${field.fieldType} (${Math.round(field.confidence * 100)}%)`,
+          3000
+        );
+      }
+    }
+  }
+
+  private generateDebugInfo(fields: DetectedField[], platform: ATSPlatform): any {
+    return {
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      platform: platform.name,
+      fieldsDetected: fields.length,
+      confidence: {
+        average: fields.reduce((sum, f) => sum + f.confidence, 0) / fields.length,
+        highest: Math.max(...fields.map(f => f.confidence)),
+        lowest: Math.min(...fields.map(f => f.confidence))
+      },
+      fields: fields.map(f => createDebugInfo(f.element, f.fieldType, f.confidence, f.detectionMethod))
+    };
+  }
+
+  private exportDebugInfo(): void {
+    if (!this.options.enableDebug) return;
+
+    (window as any).__JOB_AUTOFILL_DETECTED__ = {
+      forms: this.detectedForms,
+      detector: this,
+      atsDetector: atsDetector,
+      lastScan: new Date().toISOString(),
+      version: '2.0.0'
+    };
+  }
+
+  public getDetectedForms(): DetectedForm[] {
     return this.detectedForms;
   }
 
-  public getFieldMapping(): Map<string, HTMLInputElement> {
-    return this.fieldMapping;
+  public getDetectedFields(): DetectedField[] {
+    return this.detectedForms.flatMap(form => form.fields);
   }
 
-  public getFieldConfidence(): Map<string, number> {
-    return this.fieldConfidence;
+  public rescan(): DetectedForm[] {
+    atsDetector.reset();
+    return this.scanForForms();
   }
 
-  public fillField(fieldName: string, value: string): boolean {
-    const field = this.fieldMapping.get(fieldName);
-    if (field && !field.disabled && !field.readOnly) {
-      field.value = value;
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      field.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
-    }
-    return false;
+  public setOptions(options: Partial<FormDetectorOptions>): void {
+    this.options = { ...this.options, ...options };
   }
 
-  public getJobDetails(): any {
-    return this.jobBoardDetector.getJobDetails();
-  }
-
-  public getPlatformFeatures(): any {
-    const board = this.jobBoardDetector.getCurrentBoard();
-    return board?.features || {};
-  }
-
-  // Debug overlay helpers
-  private ensureDebugStyle(): void {
-    if (document.getElementById('job-autofill-debug-style')) return;
-    const style = document.createElement('style');
-    style.id = 'job-autofill-debug-style';
-    style.textContent = '[data-job-autofill]{ outline: 2px dashed #1976d2 !important; outline-offset: 2px !important; }';
-    document.head.appendChild(style);
-  }
-
-  public decorateField(field: HTMLElement): void {
-    this.ensureDebugStyle();
-    field.setAttribute('data-job-autofill', field.getAttribute('data-job-autofill') || '');
-  }
-
-  public removeDecorations(): void {
-    document.getElementById('job-autofill-debug-style')?.remove();
+  public destroy(): void {
+    this.observer.disconnect();
   }
 }
 
-// Initialize enhanced form detector
-const enhancedFormDetector = new EnhancedFormDetector();
+export const formDetector = new EnhancedFormDetector({
+  enableDebug: true,
+  minConfidence: 0.3,
+  highlightFields: false,
+  includeHiddenFields: false
+});
 
-// Export for use by other scripts
-(window as any).enhancedFormDetector = enhancedFormDetector;
-
-// Handle ANALYZE_PAGE requests from the popup and expose a debug snapshot
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
-    if (message?.type === 'ANALYZE_PAGE') {
-      try {
-        const detectedForms = enhancedFormDetector.getDetectedForms();
-        const fieldMapping = enhancedFormDetector.getFieldMapping();
-        const board = (window as any).jobBoardDetector?.getCurrentBoard?.() || null;
-        const jobDetails = (window as any).jobBoardDetector?.getJobDetails?.() || null;
-
-        const data = {
-          platform: board?.name || 'Generic',
-          formsFound: detectedForms ? detectedForms.size : 0,
-          fieldsDetected: fieldMapping ? fieldMapping.size : 0,
-          jobDetails,
-          canQuickApply: (window as any).jobBoardDetector?.isQuickApplyAvailable?.() || false,
-          requiresAccount: (window as any).jobBoardDetector?.requiresAccount?.() || false,
-          isMultiStep: (window as any).jobBoardDetector?.hasMultiStepApplication?.() || false,
-          confidences: Object.fromEntries(enhancedFormDetector.getFieldConfidence().entries()),
-          timestamp: new Date().toISOString(),
-          url: window.location.href
-        };
-
-        // Expose last detection snapshot for easy debugging
-        (window as any).__JOB_AUTOFILL_DETECTED__ = data;
-
-        sendResponse({ success: true, data });
-      } catch (err: any) {
-        sendResponse({ success: false, error: err?.message || 'Analysis failed' });
-      }
-
-      return true; // keep the message channel open for async safety
-    }
-
-    if (message?.type === 'TOGGLE_DEBUG_OVERLAY') {
-      try {
-        (enhancedFormDetector as any).debugOverlayEnabled = !!message.enabled;
-        if (message.enabled) {
-          // decorate all mapped fields
-          enhancedFormDetector.getFieldMapping().forEach((el) => enhancedFormDetector.decorateField(el));
-        } else {
-          enhancedFormDetector.removeDecorations();
-        }
-        sendResponse({ success: true });
-      } catch (e: any) {
-        sendResponse({ success: false, error: e?.message || 'Failed to toggle overlay' });
-      }
-      return true;
-    }
-  });
+if (typeof window !== 'undefined') {
+  (window as any).__JOB_AUTOFILL_FORM_DETECTOR__ = formDetector;
 }
+
+export { EnhancedFormDetector as FormDetector };
