@@ -1,7 +1,7 @@
 // Enhanced form filler with multi-platform support and AI integration
 // Declare chrome for content script usage
 declare const chrome: any;
-import apiService from '../services/api.js';
+import apiService from '../services/api';
 
 interface UserProfile {
   personalInfo: {
@@ -62,8 +62,11 @@ class EnhancedFormFiller {
     aiResponsesGenerated: 0,
     templatesUsed: 0,
   };
-  private undoStack: Array<{ element: HTMLInputElement | HTMLTextAreaElement; previousValue: string } > = [];
-  private currentRunChanges: Array<{ selector: string; from: string; to: string } > = [];
+  private undoStack: Array<{
+    element: HTMLInputElement | HTMLTextAreaElement;
+    previousValue: string;
+  }> = [];
+  private currentRunChanges: Array<{ selector: string; from: string; to: string }> = [];
 
   constructor() {
     this.loadUserData();
@@ -114,14 +117,17 @@ class EnhancedFormFiller {
 
   private setupMessageListener(): void {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
-  chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+      chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
         switch (message.type) {
           case 'AUTO_FILL_FORMS': {
             // Handle popup-triggered auto-fill; respect settings for AI usage
             (async () => {
               try {
                 const useAI = !!this.settings?.aiAssistanceEnabled;
-                const jobDetails = (window as any).enhancedFormDetector?.getJobDetails?.() || (window as any).jobBoardDetector?.getJobDetails?.() || null;
+                const jobDetails =
+                  (window as any).enhancedFormDetector?.getJobDetails?.() ||
+                  (window as any).jobBoardDetector?.getJobDetails?.() ||
+                  null;
                 await this.handleFillFormMessage({ useAI, jobDetails });
                 sendResponse({ success: true });
               } catch (err: any) {
@@ -168,7 +174,7 @@ class EnhancedFormFiller {
     (window as any).__JOB_AUTOFILL_LAST_RUN__ = {
       at: new Date().toISOString(),
       url: window.location.href,
-      changes: this.currentRunChanges
+      changes: this.currentRunChanges,
     };
   }
 
@@ -209,7 +215,9 @@ class EnhancedFormFiller {
       const fieldMapping = formDetector.getFieldMapping();
       await this.fillStandardFields(fieldMapping);
 
-      this.analytics.formFieldsFilled = document.querySelectorAll('input:not([value=""]), textarea:not(:empty), select option:checked').length;
+      this.analytics.formFieldsFilled = document.querySelectorAll(
+        'input:not([value=""]), textarea:not(:empty), select option:checked'
+      ).length;
       console.log('Basic form filling completed');
     } catch (error) {
       console.error('Form filling error:', error);
@@ -236,9 +244,9 @@ class EnhancedFormFiller {
     try {
       const response = await fetch(`${this.apiBaseUrl}/profile`, {
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -259,9 +267,9 @@ class EnhancedFormFiller {
     try {
       const response = await fetch(`${this.apiBaseUrl}/templates?includePublic=true`, {
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -284,8 +292,8 @@ class EnhancedFormFiller {
         address: backendProfile.personalInfo?.address?.street || '',
         city: backendProfile.personalInfo?.address?.city || '',
         state: backendProfile.personalInfo?.address?.state || '',
-  zipCode: backendProfile.personalInfo?.address?.zipCode || '',
-  country: backendProfile.personalInfo?.address?.country || ''
+        zipCode: backendProfile.personalInfo?.address?.zipCode || '',
+        country: backendProfile.personalInfo?.address?.country || '',
       },
       experience: backendProfile.experience || [],
       education: backendProfile.education || [],
@@ -297,7 +305,7 @@ class EnhancedFormFiller {
         locations: [],
         salaryRange: { min: 0, max: 0 },
         remote: false,
-      }
+      },
     };
   }
 
@@ -346,14 +354,14 @@ class EnhancedFormFiller {
       const response = await fetch(`${this.apiBaseUrl}/ai/analyze-job-advanced`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           jobTitle: jobDetails.title,
           jobDescription: jobDetails.description,
-          companyName: jobDetails.company
-        })
+          companyName: jobDetails.company,
+        }),
       });
 
       if (response.ok) {
@@ -379,7 +387,7 @@ class EnhancedFormFiller {
       address: personalInfo.address,
       city: personalInfo.city,
       state: personalInfo.state,
-      zipCode: personalInfo.zipCode
+      zipCode: personalInfo.zipCode,
     };
 
     for (const [fieldName, value] of Object.entries(standardFields)) {
@@ -409,11 +417,13 @@ class EnhancedFormFiller {
     }
   }
 
-  private identifyCustomFields(fieldMapping: Map<string, HTMLInputElement>): Array<{element: HTMLElement, type: string, purpose: string}> {
-    const customFields: Array<{element: HTMLElement, type: string, purpose: string}> = [];
+  private identifyCustomFields(
+    fieldMapping: Map<string, HTMLInputElement>
+  ): Array<{ element: HTMLElement; type: string; purpose: string }> {
+    const customFields: Array<{ element: HTMLElement; type: string; purpose: string }> = [];
 
     // Look for text areas and large text inputs
-    document.querySelectorAll('textarea, input[type="text"]').forEach((element) => {
+    document.querySelectorAll('textarea, input[type="text"]').forEach(element => {
       const el = element as unknown as HTMLInputElement | HTMLTextAreaElement;
 
       // Skip if it's already mapped to a standard field
@@ -425,7 +435,7 @@ class EnhancedFormFiller {
         customFields.push({
           element: el,
           type: el.tagName.toLowerCase(),
-          purpose
+          purpose,
         });
       }
     });
@@ -444,7 +454,10 @@ class EnhancedFormFiller {
     if (text.includes('cover letter') || text.includes('covering letter')) {
       return 'cover_letter';
     }
-    if (text.includes('why') && (text.includes('interested') || text.includes('want') || text.includes('apply'))) {
+    if (
+      text.includes('why') &&
+      (text.includes('interested') || text.includes('want') || text.includes('apply'))
+    ) {
       return 'why_interested';
     }
     if (text.includes('experience') || text.includes('background')) {
@@ -463,7 +476,11 @@ class EnhancedFormFiller {
     return 'unknown';
   }
 
-  private async generateAIContent(field: any, jobDetails: any, analysis: any): Promise<string | null> {
+  private async generateAIContent(
+    field: any,
+    jobDetails: any,
+    analysis: any
+  ): Promise<string | null> {
     if (!this.authToken) return null;
 
     try {
@@ -477,21 +494,21 @@ class EnhancedFormFiller {
       const response = await fetch(`${this.apiBaseUrl}/ai/generate-response`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           fieldType: field.purpose,
           context: {
             jobDetails,
             analysis,
-            fieldLabel: this.getFieldLabel(field.element)
+            fieldLabel: this.getFieldLabel(field.element),
           },
           options: {
             tone: this.settings.tone || 'professional',
-            length: this.getDesiredLength(field.element)
-          }
-        })
+            length: this.getDesiredLength(field.element),
+          },
+        }),
       });
 
       if (response.ok) {
@@ -507,10 +524,11 @@ class EnhancedFormFiller {
 
   private findBestTemplate(purpose: string, jobDetails: any): any {
     // Find templates matching the field purpose
-    const relevantTemplates = this.templates.filter(template =>
-      template.category === purpose ||
-      template.tags?.includes(purpose) ||
-      template.tags?.includes(jobDetails.platform?.toLowerCase())
+    const relevantTemplates = this.templates.filter(
+      template =>
+        template.category === purpose ||
+        template.tags?.includes(purpose) ||
+        template.tags?.includes(jobDetails.platform?.toLowerCase())
     );
 
     if (relevantTemplates.length === 0) return null;
@@ -537,7 +555,8 @@ class EnhancedFormFiller {
       '{skills}': this.userProfile?.skills.join(', ') || '',
       '{topSkills}': analysis?.skillMatch?.matchedSkills?.slice(0, 3).join(', ') || '',
       '{relevantExperience}': this.getRelevantExperience(analysis) || '',
-      '{strengthsToHighlight}': analysis?.advancedRecommendations?.strengthsToHighlight?.join(', ') || ''
+      '{strengthsToHighlight}':
+        analysis?.advancedRecommendations?.strengthsToHighlight?.join(', ') || '',
     };
 
     for (const [placeholder, value] of Object.entries(placeholders)) {
@@ -586,8 +605,8 @@ class EnhancedFormFiller {
       await fetch(`${this.apiBaseUrl}/applications`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           jobDetails,
@@ -595,9 +614,9 @@ class EnhancedFormFiller {
           tracking: {
             startedAt: new Date().toISOString(),
             source: window.location.hostname,
-            referrer: document.referrer
-          }
-        })
+            referrer: document.referrer,
+          },
+        }),
       });
     } catch (error) {
       console.warn('Failed to track application start:', error);
@@ -610,8 +629,8 @@ class EnhancedFormFiller {
     // Add visual feedback
     element.style.backgroundColor = '#e3f2fd';
     element.style.transition = 'background-color 0.3s ease';
-    ;(element as HTMLElement).style.outline = '2px solid #4CAF50';
-    ;(element as HTMLElement).style.outlineOffset = '1px';
+    (element as HTMLElement).style.outline = '2px solid #4CAF50';
+    (element as HTMLElement).style.outlineOffset = '1px';
 
     const prev = input.value || '';
     this.undoStack.push({ element: input, previousValue: prev });
@@ -670,7 +689,10 @@ class EnhancedFormFiller {
     }
   }
 
-  private async typeText(element: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
+  private async typeText(
+    element: HTMLInputElement | HTMLTextAreaElement,
+    text: string
+  ): Promise<void> {
     element.value = '';
     element.focus();
 
@@ -716,7 +738,10 @@ class EnhancedFormFiller {
   private analyzeCurrentJobPosting(sendResponse: (resp: any) => void): void {
     try {
       const formDetector = (window as any).enhancedFormDetector;
-      const jobDetails = formDetector?.getJobDetails?.() || (window as any).jobBoardDetector?.getJobDetails?.() || null;
+      const jobDetails =
+        formDetector?.getJobDetails?.() ||
+        (window as any).jobBoardDetector?.getJobDetails?.() ||
+        null;
       const fieldsCount = formDetector?.getFieldMapping?.()?.size || 0;
       sendResponse({ success: true, data: { jobDetails, fieldsCount } });
     } catch (e: any) {

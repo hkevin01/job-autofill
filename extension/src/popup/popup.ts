@@ -1,7 +1,7 @@
 // Popup JavaScript functionality
 // Declare chrome for MV3 popup context
 declare const chrome: any;
-import apiService from '../services/api.js';
+import apiService from '../services/api';
 
 console.log('Job AutoFill popup loaded');
 
@@ -103,9 +103,10 @@ function showUnauthenticatedUI() {
 
 function updateProfileStatus() {
   if (userProfile && profileComplete && profileIncomplete) {
-    const hasBasicInfo = userProfile.personalInfo?.firstName &&
-                        userProfile.personalInfo?.lastName &&
-                        userProfile.personalInfo?.email;
+    const hasBasicInfo =
+      userProfile.personalInfo?.firstName &&
+      userProfile.personalInfo?.lastName &&
+      userProfile.personalInfo?.email;
     const hasExperience = userProfile.experience?.length > 0;
     const hasSkills = userProfile.skills?.length > 0;
 
@@ -204,11 +205,13 @@ async function loadSettings() {
 }
 
 function isProfileComplete(profile: any): boolean {
-  return profile &&
-         profile.personalInfo?.firstName &&
-         profile.personalInfo?.lastName &&
-         profile.personalInfo?.email &&
-         profile.experience?.length > 0;
+  return (
+    profile &&
+    profile.personalInfo?.firstName &&
+    profile.personalInfo?.lastName &&
+    profile.personalInfo?.email &&
+    profile.experience?.length > 0
+  );
 }
 
 async function analyzeCurrentPage() {
@@ -225,7 +228,7 @@ async function analyzeCurrentPage() {
 
     // Send message to content script to analyze page
     const response: any = await chrome.tabs.sendMessage(tab.id, {
-      type: 'ANALYZE_PAGE'
+      type: 'ANALYZE_PAGE',
     });
 
     if (response && response.success) {
@@ -296,7 +299,7 @@ async function handleAutoFill() {
     }
 
     const response: any = await chrome.tabs.sendMessage(tab.id, {
-      type: 'AUTO_FILL_FORMS'
+      type: 'AUTO_FILL_FORMS',
     });
 
     if (response && response.success) {
@@ -332,7 +335,7 @@ async function handleSaveApplication() {
     }
 
     const response: any = await chrome.tabs.sendMessage(tab.id, {
-      type: 'SAVE_APPLICATION'
+      type: 'SAVE_APPLICATION',
     });
 
     if (response && response.success) {
@@ -351,7 +354,7 @@ async function handleAutoFillToggle() {
     const settings = await chrome.storage.sync.get('settings');
     const newSettings = {
       ...settings.settings,
-      autoFillEnabled: autoFillToggle.checked
+      autoFillEnabled: autoFillToggle.checked,
     };
 
     await chrome.storage.sync.set({ settings: newSettings });
@@ -361,7 +364,7 @@ async function handleAutoFillToggle() {
     if (tab && tab.id) {
       chrome.tabs.sendMessage(tab.id, {
         type: 'SETTINGS_UPDATED',
-        data: newSettings
+        data: newSettings,
       });
     }
   } catch (error) {
@@ -374,7 +377,7 @@ async function handleAiAssistToggle() {
     const settings = await chrome.storage.sync.get('settings');
     const newSettings = {
       ...settings.settings,
-      aiAssistanceEnabled: aiAssistToggle.checked
+      aiAssistanceEnabled: aiAssistToggle.checked,
     };
 
     await chrome.storage.sync.set({ settings: newSettings });
@@ -385,21 +388,21 @@ async function handleAiAssistToggle() {
 
 function handleSetupProfile() {
   chrome.tabs.create({
-    url: chrome.runtime.getURL('options/options.html')
+    url: chrome.runtime.getURL('options/options.html'),
   });
   window.close();
 }
 
 function handleOpenOptions() {
   chrome.tabs.create({
-    url: chrome.runtime.getURL('options/options.html')
+    url: chrome.runtime.getURL('options/options.html'),
   });
   window.close();
 }
 
 function handleOpenHelp() {
   chrome.tabs.create({
-    url: 'https://github.com/your-username/job-autofill/wiki'
+    url: 'https://github.com/your-username/job-autofill/wiki',
   });
   window.close();
 }
@@ -407,7 +410,7 @@ function handleOpenHelp() {
 function handleWebcamCapture() {
   // Open webcam capture in a new tab
   chrome.tabs.create({
-    url: chrome.runtime.getURL('webcam/webcam-capture.html')
+    url: chrome.runtime.getURL('webcam/webcam-capture.html'),
   });
   window.close();
 }
