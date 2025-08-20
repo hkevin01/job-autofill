@@ -48,10 +48,13 @@ function setupEventListeners() {
   const settingsInputs = document.querySelectorAll('#settings-tab input[type="checkbox"]');
   settingsInputs.forEach(input => {
     input.addEventListener('change', autoSave);
+    input.addEventListener('change', broadcastSettingsUpdate);
   });
 
   // Experience and education buttons
-  document.getElementById('add-experience')?.addEventListener('click', () => openModal('experience'));
+  document
+    .getElementById('add-experience')
+    ?.addEventListener('click', () => openModal('experience'));
   document.getElementById('add-education')?.addEventListener('click', () => openModal('education'));
 
   // Modal event listeners
@@ -89,7 +92,7 @@ function setupModalListeners() {
 
   // Current position checkbox
   const currentCheckbox = document.getElementById('exp-current') as HTMLInputElement;
-  currentCheckbox.addEventListener('change', (e) => {
+  currentCheckbox.addEventListener('change', e => {
     const endDateInput = document.getElementById('exp-end') as HTMLInputElement;
     endDateInput.disabled = (e.target as HTMLInputElement).checked;
     if ((e.target as HTMLInputElement).checked) {
@@ -113,7 +116,7 @@ function switchTab(tabName: string) {
 async function loadUserData() {
   try {
     const result = await chrome.storage.sync.get(['userProfile', 'settings']);
-    
+
     // Load profile data
     if (result.userProfile) {
       loadProfileData(result.userProfile);
@@ -125,7 +128,7 @@ async function loadUserData() {
     if (result.settings) {
       loadSettingsData(result.settings);
     }
-    
+
     showStatus('Data loaded successfully', 'success');
   } catch (error) {
     console.error('Error loading user data:', error);
@@ -135,7 +138,7 @@ async function loadUserData() {
 
 function loadProfileData(profile: any) {
   const personalInfo = profile.personalInfo || {};
-  
+
   Object.keys(personalInfo).forEach(key => {
     const input = document.getElementById(key) as HTMLInputElement;
     if (input) {
@@ -176,10 +179,10 @@ function loadSettingsData(settings: any) {
 function createExperienceElement(exp: any, index: number): HTMLElement {
   const div = document.createElement('div');
   div.className = 'experience-item';
-  
-  const skills = exp.skills ? exp.skills.map((skill: string) => 
-    `<span class="skill-tag">${skill}</span>`
-  ).join('') : '';
+
+  const skills = exp.skills
+    ? exp.skills.map((skill: string) => `<span class="skill-tag">${skill}</span>`).join('')
+    : '';
 
   div.innerHTML = `
     <div class="item-header">
@@ -203,7 +206,7 @@ function createExperienceElement(exp: any, index: number): HTMLElement {
 function createEducationElement(edu: any, index: number): HTMLElement {
   const div = document.createElement('div');
   div.className = 'education-item';
-  
+
   div.innerHTML = `
     <div class="item-header">
       <div>
@@ -223,7 +226,7 @@ function createEducationElement(edu: any, index: number): HTMLElement {
 
 async function autoSave() {
   showStatus('Saving...', 'saving');
-  
+
   try {
     await saveAllData();
     showStatus('All changes saved', 'success');
@@ -237,12 +240,13 @@ async function saveAllData() {
   try {
     const profileData = collectProfileData();
     const settingsData = collectSettingsData();
-    
+
     await chrome.storage.sync.set({
       userProfile: profileData,
-      settings: settingsData
+      settings: settingsData,
     });
-    
+    await broadcastSettingsUpdate();
+
     showStatus('All changes saved', 'success');
   } catch (error) {
     console.error('Error saving data:', error);
@@ -253,41 +257,60 @@ async function saveAllData() {
 function collectProfileData(): any {
   const personalInfo: any = {};
   const profileInputs = document.querySelectorAll('#profile-tab input');
-  
+
   profileInputs.forEach(input => {
     const inputEl = input as HTMLInputElement;
     personalInfo[inputEl.name] = inputEl.value;
   });
 
   // Get experience and education from current data
-  const experienceData = Array.from(document.querySelectorAll('.experience-item')).map((item, index) => {
-    // This would need to be stored in data attributes or a separate structure
-    // For now, we'll maintain this in memory
-    return getCurrentExperience()[index] || {};
-  });
+  const experienceData = Array.from(document.querySelectorAll('.experience-item')).map(
+    (item, index) => {
+      // This would need to be stored in data attributes or a separate structure
+      // For now, we'll maintain this in memory
+      return getCurrentExperience()[index] || {};
+    }
+  );
 
-  const educationData = Array.from(document.querySelectorAll('.education-item')).map((item, index) => {
-    return getCurrentEducation()[index] || {};
-  });
+  const educationData = Array.from(document.querySelectorAll('.education-item')).map(
+    (item, index) => {
+      return getCurrentEducation()[index] || {};
+    }
+  );
 
   return {
     personalInfo,
     experience: experienceData,
     education: educationData,
-    skills: [] // This could be derived from experience
+    skills: [], // This could be derived from experience
   };
 }
 
 function collectSettingsData(): any {
   const settings: any = {};
   const settingsInputs = document.querySelectorAll('#settings-tab input[type="checkbox"]');
-  
+
   settingsInputs.forEach(input => {
     const inputEl = input as HTMLInputElement;
     settings[inputEl.id] = inputEl.checked;
   });
 
   return settings;
+}
+
+async function broadcastSettingsUpdate() {
+  try {
+    const { settings } = await chrome.storage.sync.get(['settings']);
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.id) {
+      chrome.tabs.sendMessage(tab.id, {
+        type: 'SETTINGS_UPDATED',
+        data: settings || {},
+      });
+    }
+  } catch (e) {
+    // no-op
+  }
 }
 
 // Global functions for inline event handlers
@@ -336,7 +359,7 @@ function getCurrentEducation() {
 function openModal(type: string, data?: any) {
   const modal = document.getElementById(`${type}-modal`)!;
   modal.classList.add('active');
-  
+
   if (data && type === 'experience') {
     fillExperienceForm(data);
   } else if (data && type === 'education') {
@@ -358,9 +381,10 @@ function fillExperienceForm(data: any) {
   (document.getElementById('exp-position') as HTMLInputElement).value = data.position || '';
   (document.getElementById('exp-start') as HTMLInputElement).value = data.startDate || '';
   (document.getElementById('exp-end') as HTMLInputElement).value = data.endDate || '';
-  (document.getElementById('exp-description') as HTMLTextAreaElement).value = data.description || '';
+  (document.getElementById('exp-description') as HTMLTextAreaElement).value =
+    data.description || '';
   (document.getElementById('exp-skills') as HTMLInputElement).value = data.skills?.join(', ') || '';
-  
+
   const currentCheckbox = document.getElementById('exp-current') as HTMLInputElement;
   currentCheckbox.checked = !data.endDate;
   (document.getElementById('exp-end') as HTMLInputElement).disabled = !data.endDate;
@@ -376,7 +400,7 @@ function fillEducationForm(data: any) {
 function clearModalForm(type: string) {
   const form = document.getElementById(`${type}-form`) as HTMLFormElement;
   form.reset();
-  
+
   if (type === 'experience') {
     (document.getElementById('exp-end') as HTMLInputElement).disabled = false;
   }
@@ -393,11 +417,14 @@ async function saveExperience() {
     company: (document.getElementById('exp-company') as HTMLInputElement).value,
     position: (document.getElementById('exp-position') as HTMLInputElement).value,
     startDate: (document.getElementById('exp-start') as HTMLInputElement).value,
-    endDate: (document.getElementById('exp-current') as HTMLInputElement).checked ? 
-      '' : (document.getElementById('exp-end') as HTMLInputElement).value,
+    endDate: (document.getElementById('exp-current') as HTMLInputElement).checked
+      ? ''
+      : (document.getElementById('exp-end') as HTMLInputElement).value,
     description: (document.getElementById('exp-description') as HTMLTextAreaElement).value,
     skills: (document.getElementById('exp-skills') as HTMLInputElement).value
-      .split(',').map(s => s.trim()).filter(s => s)
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s),
   };
 
   if (currentEditingIndex >= 0) {
@@ -422,7 +449,7 @@ async function saveEducation() {
     institution: (document.getElementById('edu-institution') as HTMLInputElement).value,
     degree: (document.getElementById('edu-degree') as HTMLInputElement).value,
     field: (document.getElementById('edu-field') as HTMLInputElement).value,
-    graduationDate: (document.getElementById('edu-graduation') as HTMLInputElement).value
+    graduationDate: (document.getElementById('edu-graduation') as HTMLInputElement).value,
   };
 
   if (currentEditingIndex >= 0) {
@@ -448,12 +475,12 @@ async function exportData() {
     const data = await chrome.storage.sync.get(['userProfile', 'settings']);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = 'job-autofill-data.json';
     a.click();
-    
+
     URL.revokeObjectURL(url);
     showStatus('Data exported successfully', 'success');
   } catch (error) {
@@ -465,16 +492,16 @@ async function exportData() {
 async function importData(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-  
+
   if (!file) return;
 
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    
+
     await chrome.storage.sync.set(data);
     showStatus('Data imported successfully', 'success');
-    
+
     // Reload the page to show imported data
     setTimeout(() => location.reload(), 1000);
   } catch (error) {
@@ -500,7 +527,7 @@ async function clearAllData() {
 function showStatus(message: string, type: 'success' | 'error' | 'saving') {
   saveStatus.textContent = message;
   saveStatus.className = `save-status status-${type}`;
-  
+
   if (type !== 'saving') {
     setTimeout(() => {
       saveStatus.textContent = 'All changes saved';

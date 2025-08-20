@@ -1,85 +1,112 @@
-# Dependencies
+# ==========================================
+# Node.js & JavaScript Dependencies
+# ==========================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables
+# ==========================================
+# Environment Variables & Configuration
+# ==========================================
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Build outputs
+# API Keys and secrets
+config/secrets.js
+src/config/secrets.js
+secrets/
+*.key
+*.pem
+key.pem
+
+# ==========================================
+# Build Outputs & Artifacts
+# ==========================================
 dist/
 build/
+out/
+.output/
+.vercel/
+.netlify/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.vite/
+
+# Archive files
 *.tgz
 *.tar.gz
+*.zip
+*.rar
+*.7z
 
-# Runtime data
-pids
+# Extension specific builds
+*.crx
+extension/dist/
+backend/dist/
+
+# ==========================================
+# Runtime & Process Files
+# ==========================================
+pids/
 *.pid
 *.seed
 *.pid.lock
+.node_repl_history
 
-# Coverage directory used by tools like istanbul
+# ==========================================
+# Test Coverage & Reports
+# ==========================================
 coverage/
 *.lcov
+.nyc_output/
+test-results/
+coverage-reports/
+playwright-report/
+test-results/
+junit.xml
 
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# TypeScript cache
+# ==========================================
+# TypeScript & Compilation
+# ==========================================
 *.tsbuildinfo
+.tsc/
 
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
+# ==========================================
+# Package Manager Caches
+# ==========================================
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-integrity
 .eslintcache
-
-# Optional stylelint cache
 .stylelintcache
 
-# Microbundle cache
+# ==========================================
+# Bundler & Tool Caches
+# ==========================================
 .rpt2_cache/
 .rts2_cache_cjs/
 .rts2_cache_es/
 .rts2_cache_umd/
+.rollup.cache/
+.terser-cache/
+.webpack/
+.swc/
+.turbo/
 
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Editor directories and files
+# ==========================================
+# IDE & Editor Files
+# ==========================================
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -89,72 +116,113 @@ temp/
 *.swp
 *.swo
 *~
+*.sublime-*
+.history/
 
-# OS generated files
+# ==========================================
+# Operating System Files
+# ==========================================
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
+
+# Windows
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Logs
-logs
+# Linux
+*~
+.directory
+
+# ==========================================
+# Logs & Debug Files
+# ==========================================
+logs/
 *.log
+debug.log
+error.log
 
-# Database
+# ==========================================
+# Database Files
+# ==========================================
 *.sqlite
 *.sqlite3
 *.db
-
-# Extension specific
-*.crx
-*.pem
-key.pem
-
-# API Keys and secrets
-config/secrets.js
-src/config/secrets.js
-secrets/
-
-# Build artifacts
-extension/dist/
-backend/dist/
-*.zip
-
-# Test artifacts
-test-results/
-coverage-reports/
-
-# Docker
-.dockerignore
-
-# MongoDB
+*.db-journal
 data/
 mongo-data/
-
-# Redis
 dump.rdb
 
-# AI model files
+# ==========================================
+# Docker & Containers
+# ==========================================
+.dockerignore
+docker-compose.override.yml
+.docker/
+
+# ==========================================
+# AI & Machine Learning
+# ==========================================
 *.model
 *.pkl
 *.joblib
+*.h5
+*.weights
 
-# Large files
+# ==========================================
+# Media Files
+# ==========================================
 *.mp4
 *.mov
 *.avi
 *.mkv
+*.webm
+*.mp3
+*.wav
+*.flac
 
-# Backup files
+# ==========================================
+# Backup & Temporary Files
+# ==========================================
 *.bak
 *.backup
 *.orig
+*.tmp
+tmp/
+temp/
+.temp/
 
-# Lock files (uncomment if using npm)
-# package-lock.json
+# ==========================================
+# Security & Certificates
+# ==========================================
+*.crt
+*.cert
+*.key
+*.p12
+*.pfx
+ssl/
+certificates/
 
-# Yarn lock file (uncomment if not using yarn)
-# yarn.lock
+# ==========================================
+# Package Manager Lock Files
+# (Uncomment based on your preference)
+# ==========================================
+# package-lock.json  # Uncomment if using yarn or pnpm
+# yarn.lock          # Uncomment if using npm or pnpm
+# pnpm-lock.yaml     # Uncomment if using npm or yarn
+
+# ==========================================
+# Project Specific
+# ==========================================
+# Storybook
+.storybook-out/
+
+# Miscellaneous
+.serverless/
+.firebase/
+.gcp/
+.aws/

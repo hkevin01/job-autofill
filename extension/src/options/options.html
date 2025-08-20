@@ -1,240 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job AutoFill - Settings</title>
-  <link rel="stylesheet" href="options.css">
-</head>
-<body>
-  <div class="options-container">
-    <header class="options-header">
-      <div class="logo">
-        <img src="../assets/icons/icon48.png" alt="Job AutoFill" class="logo-icon">
-        <h1 class="title">Job AutoFill Settings</h1>
-      </div>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job AutoFill - Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="options-container">
+      <header class="options-header">
+        <div class="logo">
+          <img src="../assets/icons/icon48.png" alt="Job AutoFill" class="logo-icon" />
+          <h1 class="title">Job AutoFill Settings</h1>
+        </div>
+      </header>
 
-    <nav class="options-nav">
-      <button class="nav-btn active" data-tab="profile">👤 Profile</button>
-      <button class="nav-btn" data-tab="experience">💼 Experience</button>
-      <button class="nav-btn" data-tab="education">🎓 Education</button>
-      <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
-    </nav>
+      <nav class="options-nav">
+        <button class="nav-btn active" data-tab="profile">👤 Profile</button>
+        <button class="nav-btn" data-tab="experience">💼 Experience</button>
+        <button class="nav-btn" data-tab="education">🎓 Education</button>
+        <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
+      </nav>
 
-    <main class="options-main">
-      <!-- Profile Tab -->
-      <div class="tab-content active" id="profile-tab">
-        <h2>Personal Information</h2>
-        <form class="profile-form">
-          <div class="form-group">
-            <label for="firstName">First Name *</label>
-            <input type="text" id="firstName" name="firstName" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="lastName">Last Name *</label>
-            <input type="text" id="lastName" name="lastName" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="email">Email *</label>
-            <input type="email" id="email" name="email" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="phone">Phone</label>
-            <input type="tel" id="phone" name="phone">
-          </div>
-          
-          <div class="form-group">
-            <label for="address">Address</label>
-            <input type="text" id="address" name="address">
-          </div>
-          
-          <div class="form-row">
+      <main class="options-main">
+        <!-- Profile Tab -->
+        <div class="tab-content active" id="profile-tab">
+          <h2>Personal Information</h2>
+          <form class="profile-form">
             <div class="form-group">
-              <label for="city">City</label>
-              <input type="text" id="city" name="city">
+              <label for="firstName">First Name *</label>
+              <input type="text" id="firstName" name="firstName" required />
             </div>
+
             <div class="form-group">
-              <label for="state">State</label>
-              <input type="text" id="state" name="state">
+              <label for="lastName">Last Name *</label>
+              <input type="text" id="lastName" name="lastName" required />
             </div>
+
             <div class="form-group">
-              <label for="zipCode">ZIP Code</label>
-              <input type="text" id="zipCode" name="zipCode">
+              <label for="email">Email *</label>
+              <input type="email" id="email" name="email" required />
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="linkedinUrl">LinkedIn Profile</label>
-            <input type="url" id="linkedinUrl" name="linkedinUrl" placeholder="https://linkedin.com/in/your-profile">
-          </div>
-        </form>
-      </div>
 
-      <!-- Experience Tab -->
-      <div class="tab-content" id="experience-tab">
-        <div class="tab-header">
-          <h2>Work Experience</h2>
-          <button class="btn btn-primary" id="add-experience">+ Add Experience</button>
-        </div>
-        <div id="experience-list" class="experience-list">
-          <!-- Experience items will be dynamically added here -->
-        </div>
-      </div>
-
-      <!-- Education Tab -->
-      <div class="tab-content" id="education-tab">
-        <div class="tab-header">
-          <h2>Education</h2>
-          <button class="btn btn-primary" id="add-education">+ Add Education</button>
-        </div>
-        <div id="education-list" class="education-list">
-          <!-- Education items will be dynamically added here -->
-        </div>
-      </div>
-
-      <!-- Settings Tab -->
-      <div class="tab-content" id="settings-tab">
-        <h2>Extension Settings</h2>
-        
-        <div class="settings-section">
-          <h3>Auto-Fill Settings</h3>
-          <div class="setting-item">
-            <label class="toggle-label">
-              <input type="checkbox" id="autoFillEnabled">
-              <span class="toggle-slider"></span>
-              <span class="toggle-text">Enable auto-fill</span>
-            </label>
-            <p class="setting-description">Automatically fill detected form fields</p>
-          </div>
-          
-          <div class="setting-item">
-            <label class="toggle-label">
-              <input type="checkbox" id="aiAssistanceEnabled">
-              <span class="toggle-slider"></span>
-              <span class="toggle-text">Enable AI assistance</span>
-            </label>
-            <p class="setting-description">Use AI to generate personalized responses</p>
-          </div>
-          
-          <div class="setting-item">
-            <label class="toggle-label">
-              <input type="checkbox" id="showNotifications">
-              <span class="toggle-slider"></span>
-              <span class="toggle-text">Show notifications</span>
-            </label>
-            <p class="setting-description">Display notifications when forms are filled</p>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>Data Management</h3>
-          <div class="data-actions">
-            <button class="btn btn-secondary" id="export-data">Export Data</button>
-            <button class="btn btn-secondary" id="import-data">Import Data</button>
-            <button class="btn btn-danger" id="clear-data">Clear All Data</button>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <footer class="options-footer">
-      <div class="save-status" id="save-status">
-        <span class="status-text">All changes saved</span>
-      </div>
-      <div class="footer-buttons">
-        <button class="btn btn-secondary" id="reset-btn">Reset</button>
-        <button class="btn btn-primary" id="save-btn">Save Changes</button>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Experience Modal -->
-  <div class="modal" id="experience-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add/Edit Experience</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="experience-form">
-          <div class="form-group">
-            <label for="exp-company">Company *</label>
-            <input type="text" id="exp-company" required>
-          </div>
-          <div class="form-group">
-            <label for="exp-position">Position *</label>
-            <input type="text" id="exp-position" required>
-          </div>
-          <div class="form-row">
             <div class="form-group">
-              <label for="exp-start">Start Date</label>
-              <input type="month" id="exp-start">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" />
             </div>
+
             <div class="form-group">
-              <label for="exp-end">End Date</label>
-              <input type="month" id="exp-end">
-              <label class="checkbox-label">
-                <input type="checkbox" id="exp-current"> Current position
+              <label for="address">Address</label>
+              <input type="text" id="address" name="address" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" />
+              </div>
+              <div class="form-group">
+                <label for="state">State</label>
+                <input type="text" id="state" name="state" />
+              </div>
+              <div class="form-group">
+                <label for="zipCode">ZIP Code</label>
+                <input type="text" id="zipCode" name="zipCode" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="linkedinUrl">LinkedIn Profile</label>
+              <input
+                type="url"
+                id="linkedinUrl"
+                name="linkedinUrl"
+                placeholder="https://linkedin.com/in/your-profile"
+              />
+            </div>
+          </form>
+        </div>
+
+        <!-- Experience Tab -->
+        <div class="tab-content" id="experience-tab">
+          <div class="tab-header">
+            <h2>Work Experience</h2>
+            <button class="btn btn-primary" id="add-experience">+ Add Experience</button>
+          </div>
+          <div id="experience-list" class="experience-list">
+            <!-- Experience items will be dynamically added here -->
+          </div>
+        </div>
+
+        <!-- Education Tab -->
+        <div class="tab-content" id="education-tab">
+          <div class="tab-header">
+            <h2>Education</h2>
+            <button class="btn btn-primary" id="add-education">+ Add Education</button>
+          </div>
+          <div id="education-list" class="education-list">
+            <!-- Education items will be dynamically added here -->
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings-tab">
+          <h2>Extension Settings</h2>
+
+          <div class="settings-section">
+            <h3>Auto-Fill Settings</h3>
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="autoFillEnabled" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Enable auto-fill</span>
               </label>
+              <p class="setting-description">Automatically fill detected form fields</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="aiAssistanceEnabled" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Enable AI assistance</span>
+              </label>
+              <p class="setting-description">Use AI to generate personalized responses</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="animateTyping" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Animate typing</span>
+              </label>
+              <p class="setting-description">Type into fields character-by-character for better UX</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="debugOverlayEnabled" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Show debug overlay</span>
+              </label>
+              <p class="setting-description">Outline detected fields to help troubleshoot mapping</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="showNotifications" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Show notifications</span>
+              </label>
+              <p class="setting-description">Display notifications when forms are filled</p>
             </div>
           </div>
-          <div class="form-group">
-            <label for="exp-description">Description</label>
-            <textarea id="exp-description" rows="4" placeholder="Describe your role and achievements..."></textarea>
+
+          <div class="settings-section">
+            <h3>Data Management</h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary" id="export-data">Export Data</button>
+              <button class="btn btn-secondary" id="import-data">Import Data</button>
+              <button class="btn btn-danger" id="clear-data">Clear All Data</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="exp-skills">Skills (comma-separated)</label>
-            <input type="text" id="exp-skills" placeholder="JavaScript, Python, Project Management">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="modal-save">Save</button>
+        </div>
+      </main>
+
+      <footer class="options-footer">
+        <div class="save-status" id="save-status">
+          <span class="status-text">All changes saved</span>
+        </div>
+        <div class="footer-buttons">
+          <button class="btn btn-secondary" id="reset-btn">Reset</button>
+          <button class="btn btn-primary" id="save-btn">Save Changes</button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Experience Modal -->
+    <div class="modal" id="experience-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add/Edit Experience</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="experience-form">
+            <div class="form-group">
+              <label for="exp-company">Company *</label>
+              <input type="text" id="exp-company" required />
+            </div>
+            <div class="form-group">
+              <label for="exp-position">Position *</label>
+              <input type="text" id="exp-position" required />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="exp-start">Start Date</label>
+                <input type="month" id="exp-start" />
+              </div>
+              <div class="form-group">
+                <label for="exp-end">End Date</label>
+                <input type="month" id="exp-end" />
+                <label class="checkbox-label">
+                  <input type="checkbox" id="exp-current" />
+                  Current position
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="exp-description">Description</label>
+              <textarea id="exp-description" rows="4" placeholder="Describe your role and achievements..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="exp-skills">Skills (comma-separated)</label>
+              <input type="text" id="exp-skills" placeholder="JavaScript, Python, Project Management" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-save">Save</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Education Modal -->
-  <div class="modal" id="education-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add/Edit Education</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="education-form">
-          <div class="form-group">
-            <label for="edu-institution">Institution *</label>
-            <input type="text" id="edu-institution" required>
-          </div>
-          <div class="form-group">
-            <label for="edu-degree">Degree *</label>
-            <input type="text" id="edu-degree" required>
-          </div>
-          <div class="form-group">
-            <label for="edu-field">Field of Study</label>
-            <input type="text" id="edu-field">
-          </div>
-          <div class="form-group">
-            <label for="edu-graduation">Graduation Date</label>
-            <input type="month" id="edu-graduation">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="modal-cancel-edu">Cancel</button>
-        <button class="btn btn-primary" id="modal-save-edu">Save</button>
+    <!-- Education Modal -->
+    <div class="modal" id="education-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add/Edit Education</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="education-form">
+            <div class="form-group">
+              <label for="edu-institution">Institution *</label>
+              <input type="text" id="edu-institution" required />
+            </div>
+            <div class="form-group">
+              <label for="edu-degree">Degree *</label>
+              <input type="text" id="edu-degree" required />
+            </div>
+            <div class="form-group">
+              <label for="edu-field">Field of Study</label>
+              <input type="text" id="edu-field" />
+            </div>
+            <div class="form-group">
+              <label for="edu-graduation">Graduation Date</label>
+              <input type="month" id="edu-graduation" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="modal-cancel-edu">Cancel</button>
+          <button class="btn btn-primary" id="modal-save-edu">Save</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <input type="file" id="import-file" accept=".json" style="display: none;">
+    <input type="file" id="import-file" accept=".json" style="display: none" />
 
-  <script src="options.js"></script>
-</body>
+    <script src="options.js"></script>
+  </body>
 </html>

@@ -1,4 +1,6 @@
 // Enhanced form filler with multi-platform support and AI integration
+// Declare chrome for content script usage
+declare const chrome: any;
 import apiService from '../services/api.js';
 
 interface UserProfile {
@@ -52,17 +54,22 @@ class EnhancedFormFiller {
   private templates: any[] = [];
   private currentJobDetails: any = null;
   private fillCount = 0;
+  private authToken: string | null = null;
+  private apiBaseUrl: string = 'http://localhost:3000/api';
   private analytics = {
     startTime: Date.now(),
     formFieldsFilled: 0,
     aiResponsesGenerated: 0,
     templatesUsed: 0,
   };
+  private undoStack: Array<{ element: HTMLInputElement | HTMLTextAreaElement; previousValue: string } > = [];
+  private currentRunChanges: Array<{ selector: string; from: string; to: string } > = [];
 
   constructor() {
     this.loadUserData();
     this.setupMessageListener();
     this.initializeApiConnection();
+    this.initializeAuthToken();
   }
 
   private async loadUserData(): Promise<void> {
@@ -107,8 +114,22 @@ class EnhancedFormFiller {
 
   private setupMessageListener(): void {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
         switch (message.type) {
+          case 'AUTO_FILL_FORMS': {
+            // Handle popup-triggered auto-fill; respect settings for AI usage
+            (async () => {
+              try {
+                const useAI = !!this.settings?.aiAssistanceEnabled;
+                const jobDetails = (window as any).enhancedFormDetector?.getJobDetails?.() || (window as any).jobBoardDetector?.getJobDetails?.() || null;
+                await this.handleFillFormMessage({ useAI, jobDetails });
+                sendResponse({ success: true });
+              } catch (err: any) {
+                sendResponse({ success: false, error: err?.message || 'Fill failed' });
+              }
+            })();
+            return true; // async response
+          }
           case 'FILL_FORM':
             this.handleFillFormMessage(message.data);
             break;
@@ -121,6 +142,9 @@ class EnhancedFormFiller {
           case 'GET_FORM_DATA':
             this.getFormData(sendResponse);
             return true;
+          case 'UNDO_FILL':
+            this.undoLastFill(sendResponse);
+            return true;
         }
       });
     }
@@ -128,7 +152,9 @@ class EnhancedFormFiller {
 
   private async handleFillFormMessage(data: any): Promise<void> {
     this.analytics.startTime = Date.now();
-    
+    this.currentRunChanges = [];
+    this.undoStack = [];
+
     if (data.useAI && data.jobDetails) {
       await this.fillFormWithAI(data.jobDetails);
     } else {
@@ -137,6 +163,13 @@ class EnhancedFormFiller {
 
     // Track analytics
     await this.trackFormFillAnalytics();
+
+    // Store last run snapshot for debugging / undo
+    (window as any).__JOB_AUTOFILL_LAST_RUN__ = {
+      at: new Date().toISOString(),
+      url: window.location.href,
+      changes: this.currentRunChanges
+    };
   }
 
   private async trackFormFillAnalytics(): Promise<void> {
@@ -164,39 +197,30 @@ class EnhancedFormFiller {
     }
 
     await this.loadTemplates();
-    
+
     try {
-      await this.fillPersonalInfo();
-      await this.fillExperience();
-      await this.fillEducation();
-      await this.fillSkills();
-      
+      // Get field mapping from enhanced detector
+      const formDetector = (window as any).enhancedFormDetector;
+      if (!formDetector) {
+        console.warn('Enhanced form detector not available');
+        return;
+      }
+
+      const fieldMapping = formDetector.getFieldMapping();
+      await this.fillStandardFields(fieldMapping);
+
       this.analytics.formFieldsFilled = document.querySelectorAll('input:not([value=""]), textarea:not(:empty), select option:checked').length;
-      
       console.log('Basic form filling completed');
     } catch (error) {
       console.error('Form filling error:', error);
     }
-  }
-      return;
-    }
-
-    // Get field mapping from enhanced detector
-    const formDetector = (window as any).enhancedFormDetector;
-    if (!formDetector) {
-      console.warn('Enhanced form detector not available');
-      return;
-    }
-
-    const fieldMapping = formDetector.getFieldMapping();
-    await this.fillStandardFields(fieldMapping);
   }
 
   private async initializeAuthToken(): Promise<void> {
     try {
       const result = await chrome.storage.sync.get(['authToken']);
       this.authToken = result.authToken || null;
-      
+
       if (this.authToken) {
         await this.loadBackendProfile();
         await this.loadTemplates();
@@ -260,12 +284,20 @@ class EnhancedFormFiller {
         address: backendProfile.personalInfo?.address?.street || '',
         city: backendProfile.personalInfo?.address?.city || '',
         state: backendProfile.personalInfo?.address?.state || '',
-        zipCode: backendProfile.personalInfo?.address?.zipCode || '',
-        linkedinUrl: backendProfile.personalInfo?.linkedinUrl || ''
+  zipCode: backendProfile.personalInfo?.address?.zipCode || '',
+  country: backendProfile.personalInfo?.address?.country || ''
       },
       experience: backendProfile.experience || [],
       education: backendProfile.education || [],
-      skills: backendProfile.skills || []
+      skills: backendProfile.skills || [],
+      certifications: backendProfile.certifications || [],
+      preferences: backendProfile.preferences || {
+        jobTypes: [],
+        industries: [],
+        locations: [],
+        salaryRange: { min: 0, max: 0 },
+        remote: false,
+      }
     };
   }
 
@@ -290,7 +322,7 @@ class EnhancedFormFiller {
 
       // Analyze the job for better responses
       const analysis = await this.analyzeJobWithAI(jobDetails);
-      
+
       // Fill standard fields
       await this.fillStandardFields(fieldMapping);
 
@@ -353,6 +385,8 @@ class EnhancedFormFiller {
     for (const [fieldName, value] of Object.entries(standardFields)) {
       const field = fieldMapping.get(fieldName);
       if (field && value) {
+        // skip file inputs defensively
+        if ((field as HTMLInputElement).type === 'file') continue;
         await this.fillFieldWithAnimation(field, value);
       }
     }
@@ -377,11 +411,11 @@ class EnhancedFormFiller {
 
   private identifyCustomFields(fieldMapping: Map<string, HTMLInputElement>): Array<{element: HTMLElement, type: string, purpose: string}> {
     const customFields: Array<{element: HTMLElement, type: string, purpose: string}> = [];
-    
+
     // Look for text areas and large text inputs
-    document.querySelectorAll('textarea, input[type="text"]').forEach((element: HTMLElement) => {
-      const el = element as HTMLInputElement | HTMLTextAreaElement;
-      
+    document.querySelectorAll('textarea, input[type="text"]').forEach((element) => {
+      const el = element as unknown as HTMLInputElement | HTMLTextAreaElement;
+
       // Skip if it's already mapped to a standard field
       const isStandardField = Array.from(fieldMapping.values()).includes(el as HTMLInputElement);
       if (isStandardField) return;
@@ -404,7 +438,7 @@ class EnhancedFormFiller {
     const placeholder = element.getAttribute('placeholder') || '';
     const name = element.getAttribute('name') || '';
     const id = element.getAttribute('id') || '';
-    
+
     const text = `${label} ${placeholder} ${name} ${id}`.toLowerCase();
 
     if (text.includes('cover letter') || text.includes('covering letter')) {
@@ -473,7 +507,7 @@ class EnhancedFormFiller {
 
   private findBestTemplate(purpose: string, jobDetails: any): any {
     // Find templates matching the field purpose
-    const relevantTemplates = this.templates.filter(template => 
+    const relevantTemplates = this.templates.filter(template =>
       template.category === purpose ||
       template.tags?.includes(purpose) ||
       template.tags?.includes(jobDetails.platform?.toLowerCase())
@@ -519,11 +553,9 @@ class EnhancedFormFiller {
     }
 
     const relevantExperiences = this.userProfile.experience.filter(exp => {
+      const desc = (exp.description || '').toLowerCase();
       return analysis.skillMatch.matchedSkills.some((skill: string) =>
-        exp.skills.some(expSkill => 
-          expSkill.toLowerCase().includes(skill.toLowerCase()) ||
-          skill.toLowerCase().includes(expSkill.toLowerCase())
-        )
+        desc.includes(String(skill).toLowerCase())
       );
     });
 
@@ -539,11 +571,11 @@ class EnhancedFormFiller {
       if (rows > 10) return 'long';
       if (rows > 5) return 'medium';
     }
-    
+
     const maxLength = parseInt(element.getAttribute('maxlength') || '0');
     if (maxLength > 1000) return 'long';
     if (maxLength > 200) return 'medium';
-    
+
     return 'short';
   }
 
@@ -574,11 +606,16 @@ class EnhancedFormFiller {
 
   private async fillFieldWithAnimation(element: HTMLElement, value: string): Promise<void> {
     const input = element as HTMLInputElement | HTMLTextAreaElement;
-    
+
     // Add visual feedback
     element.style.backgroundColor = '#e3f2fd';
     element.style.transition = 'background-color 0.3s ease';
-    
+    ;(element as HTMLElement).style.outline = '2px solid #4CAF50';
+    ;(element as HTMLElement).style.outlineOffset = '1px';
+
+    const prev = input.value || '';
+    this.undoStack.push({ element: input, previousValue: prev });
+
     // Simulate typing for better UX
     if (this.settings.animateTyping) {
       await this.typeText(input, value);
@@ -587,23 +624,62 @@ class EnhancedFormFiller {
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    
+
+    // record change
+    const selector = this.getBestSelector(element);
+    this.currentRunChanges.push({ selector, from: prev, to: value });
+
     // Reset background
     setTimeout(() => {
       element.style.backgroundColor = '';
+      (element as HTMLElement).style.outline = '';
     }, 1000);
+  }
+
+  private getBestSelector(element: HTMLElement): string {
+    if (element.id) return `#${element.id}`;
+    const name = element.getAttribute('name');
+    if (name) return `${element.tagName.toLowerCase()}[name="${name}"]`;
+    // fallback path
+    const parts: string[] = [];
+    let el: HTMLElement | null = element;
+    while (el && parts.length < 3) {
+      const tag = el.tagName.toLowerCase();
+      const idx = Array.from(el.parentElement?.children || []).indexOf(el) + 1;
+      parts.unshift(`${tag}:nth-child(${idx})`);
+      el = el.parentElement as HTMLElement | null;
+    }
+    return parts.length ? parts.join(' > ') : element.tagName.toLowerCase();
+  }
+
+  private undoLastFill(sendResponse: (resp: any) => void): void {
+    try {
+      // revert all changes from last run in reverse order
+      for (let i = this.undoStack.length - 1; i >= 0; i--) {
+        const { element, previousValue } = this.undoStack[i];
+        element.value = previousValue;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      this.undoStack = [];
+      this.currentRunChanges = [];
+      (window as any).__JOB_AUTOFILL_LAST_RUN__ = null;
+      sendResponse({ success: true });
+    } catch (e: any) {
+      sendResponse({ success: false, error: e?.message || 'Failed to undo' });
+    }
   }
 
   private async typeText(element: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
     element.value = '';
     element.focus();
-    
+
     for (let i = 0; i < text.length; i++) {
       element.value += text[i];
       element.dispatchEvent(new Event('input', { bubbles: true }));
       await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 10));
     }
-    
+
     element.dispatchEvent(new Event('change', { bubbles: true }));
     element.blur();
   }
@@ -636,17 +712,38 @@ class EnhancedFormFiller {
     return '';
   }
 
-    // Use placeholder or name as fallback
-    return element.getAttribute('placeholder') || 
-           element.getAttribute('name') || 
-           element.getAttribute('id') || 
-           'Unknown Field';
+  // Minimal implementation to support popup analysis and data fetch
+  private analyzeCurrentJobPosting(sendResponse: (resp: any) => void): void {
+    try {
+      const formDetector = (window as any).enhancedFormDetector;
+      const jobDetails = formDetector?.getJobDetails?.() || (window as any).jobBoardDetector?.getJobDetails?.() || null;
+      const fieldsCount = formDetector?.getFieldMapping?.()?.size || 0;
+      sendResponse({ success: true, data: { jobDetails, fieldsCount } });
+    } catch (e: any) {
+      sendResponse({ success: false, error: e?.message || 'Failed to analyze job' });
+    }
+  }
+
+  private getFormData(sendResponse: (resp: any) => void): void {
+    try {
+      const formDetector = (window as any).enhancedFormDetector;
+      const mapping = formDetector?.getFieldMapping?.();
+      const data: Record<string, string> = {};
+      if (mapping) {
+        mapping.forEach((el: HTMLInputElement, key: string) => {
+          data[key] = el.value || '';
+        });
+      }
+      sendResponse({ success: true, data });
+    } catch (e: any) {
+      sendResponse({ success: false, error: e?.message || 'Failed to get form data' });
+    }
   }
 }
 
 // Initialize enhanced form filler
 const enhancedFormFiller = new EnhancedFormFiller();
 
-// Export for use by other scripts and maintain backward compatibility  
+// Export for use by other scripts and maintain backward compatibility
 (window as any).formFiller = enhancedFormFiller;
 (window as any).enhancedFormFiller = enhancedFormFiller;

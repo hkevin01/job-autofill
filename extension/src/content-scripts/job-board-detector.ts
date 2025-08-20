@@ -16,11 +16,11 @@ export interface JobBoardSelectors {
   jobLocation: string[];
   jobType: string[];
   salary: string[];
-  
+
   // Application form selectors
   applyButton: string[];
   applicationForm: string[];
-  
+
   // Common form fields (override generic selectors)
   firstName?: string[];
   lastName?: string[];
@@ -28,7 +28,7 @@ export interface JobBoardSelectors {
   phone?: string[];
   resume?: string[];
   coverLetter?: string[];
-  
+
   // Platform-specific fields
   customFields?: Record<string, string[]>;
 }
@@ -43,6 +43,173 @@ export interface JobBoardFeatures {
 
 // Supported job boards configuration
 export const JOB_BOARDS: Record<string, JobBoard> = {
+  greenhouse: {
+    name: 'Greenhouse',
+    domain: 'greenhouse.io',
+    selectors: {
+      jobTitle: ['h1', '.app-title', '.opening .title'],
+      companyName: ['.company-name', 'a[href*="greenhouse.io/companies"]', '.opening .company'],
+      jobDescription: ['.opening .content', '#content', '.content'],
+      jobLocation: ['.location', '.opening .location'],
+      jobType: ['.employment-type'],
+      salary: ['.compensation'],
+      applyButton: ['a[href*="/apply" i]', 'a[href*="/applications" i]', 'button[type="submit"]'],
+      applicationForm: ['form#application_form', 'form[action*="/applications" i]', 'form[action*="/apply" i]'],
+      firstName: ['input[name="first_name"]', 'input[name*="first" i]', 'input[id*="first" i]'],
+      lastName: ['input[name="last_name"]', 'input[name*="last" i]', 'input[id*="last" i]'],
+      email: ['input[name="email"]', 'input[type="email"]'],
+      phone: ['input[name="phone"]', 'input[type="tel"]'],
+      resume: ['input[type="file"][name*="resume" i]', 'input[type="file"][name*="cv" i]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: false,
+      hasMultiStep: false,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: false
+    }
+  },
+
+  lever: {
+    name: 'Lever',
+    domain: 'lever.co',
+    selectors: {
+      jobTitle: ['.posting-headline h2', 'h2.posting-headline'],
+      companyName: ['.posting-headline .company', 'a[href*="jobs.lever.co"]'],
+      jobDescription: ['.section-wrapper.page-full-width', '.posting-description'],
+      jobLocation: ['.posting-categories .location', '.sort-by-time > .location'],
+      jobType: ['.posting-categories .commitment'],
+      salary: ['.compensation'],
+      applyButton: ['a[href*="/apply" i]', 'button[type="submit"]'],
+      applicationForm: ['form.posting-form', 'form[action*="/apply" i]'],
+      firstName: ['input[name*="first" i]', 'input[id*="first" i]'],
+      lastName: ['input[name*="last" i]', 'input[id*="last" i]'],
+      email: ['input[name="email"]', 'input[type="email"]'],
+      phone: ['input[name="phone"]', 'input[type="tel"]'],
+      resume: ['input[type="file"][name*="resume" i]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: false,
+      hasMultiStep: false,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: false
+    }
+  },
+
+  workday: {
+    name: 'Workday',
+    domain: 'myworkdayjobs.com',
+    selectors: {
+      jobTitle: ['h1', '[data-automation-id*="jobTitle" i]'],
+      companyName: ['[data-automation-id*="company" i]'],
+      jobDescription: ['[data-automation-id*="jobPostingDescription" i]', '.gwt-HTML'],
+      jobLocation: ['[data-automation-id*="locations" i]', '[data-automation-id*="jobPostingLocations" i]'],
+      jobType: ['[data-automation-id*="jobPostingJobType" i]'],
+      salary: ['[data-automation-id*="compensation" i]'],
+      applyButton: ['button[title*="Apply" i]', 'button[data-automation-id*="apply" i]'],
+      applicationForm: ['form', 'div[role="form"]', '.gwt-FormPanel'],
+      firstName: ['input[name*="first" i]', 'input[id*="first" i]'],
+      lastName: ['input[name*="last" i]', 'input[id*="last" i]'],
+      email: ['input[type="email"]', 'input[name*="email" i]'],
+      phone: ['input[type="tel"]', 'input[name*="phone" i]'],
+      resume: ['input[type="file"]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: false,
+      hasMultiStep: true,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: true
+    }
+  },
+
+  taleo: {
+    name: 'Taleo',
+    domain: 'taleo.net',
+    selectors: {
+      jobTitle: ['h1', '.title'],
+      companyName: ['.company', '.branding'],
+      jobDescription: ['.description', '#requisitionDescriptionInterface\.requisitionDescription', '.jobdescription'],
+      jobLocation: ['.location', '[id*="location" i]'],
+      jobType: ['.employmentType'],
+      salary: ['.salaryRange'],
+      applyButton: ['a[href*="applyRequisition" i]', 'button[type="submit"]'],
+      applicationForm: ['form[action*="applyRequisition" i]', 'form[id*="apply" i]'],
+      firstName: ['input[id*="firstName" i]', 'input[name*="first" i]'],
+      lastName: ['input[id*="lastName" i]', 'input[name*="last" i]'],
+      email: ['input[id*="email" i]', 'input[type="email"]'],
+      phone: ['input[id*="phone" i]', 'input[type="tel"]'],
+      resume: ['input[type="file"]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: false,
+      hasMultiStep: true,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: true
+    }
+  },
+
+  ashby: {
+    name: 'Ashby',
+    domain: 'ashbyhq.com',
+    selectors: {
+      jobTitle: ['h1', '[data-testid*="job-title" i]'],
+      companyName: ['[data-testid*="company-name" i]', 'a[href*="jobs.ashbyhq.com" i]'],
+      jobDescription: ['[data-testid*="job-description" i]', '.ProseMirror'],
+      jobLocation: ['[data-testid*="job-location" i]', '.location'],
+      jobType: ['.employment-type'],
+      salary: ['[data-testid*="salary" i]'],
+      applyButton: ['a[href*="/application" i]', 'button[type="submit"]'],
+      applicationForm: ['form[action*="/application" i]', 'form'],
+      firstName: ['input[name*="first" i]', 'input[id*="first" i]'],
+      lastName: ['input[name*="last" i]', 'input[id*="last" i]'],
+      email: ['input[name*="email" i]', 'input[type="email"]'],
+      phone: ['input[name*="phone" i]', 'input[type="tel"]'],
+      resume: ['input[type="file"]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: false,
+      hasMultiStep: false,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: false
+    }
+  },
+
+  smartrecruiters: {
+    name: 'SmartRecruiters',
+    domain: 'smartrecruiters.com',
+    selectors: {
+      jobTitle: ['h1', '[data-qa*="job-title" i]'],
+      companyName: ['[data-qa*="company-name" i]'],
+      jobDescription: ['[data-qa*="job-description" i]', '.job-page__description'],
+      jobLocation: ['[data-qa*="job-location" i]'],
+      jobType: ['[data-qa*="job-type" i]'],
+      salary: ['[data-qa*="salary" i]'],
+      applyButton: ['a[href*="/apply" i]', 'button[type="submit"]'],
+      applicationForm: ['form', 'form[action*="/apply" i]'],
+      firstName: ['input[name="firstName" i]', 'input[name*="first" i]'],
+      lastName: ['input[name="lastName" i]', 'input[name*="last" i]'],
+      email: ['input[name="email" i]', 'input[type="email"]'],
+      phone: ['input[name="phoneNumber" i]', 'input[type="tel"]'],
+      resume: ['input[type="file"]'],
+      coverLetter: ['textarea[name*="cover" i]']
+    },
+    features: {
+      hasQuickApply: true,
+      hasMultiStep: true,
+      hasFileUpload: true,
+      hasCustomQuestions: true,
+      requiresAccount: false
+    }
+  },
   linkedin: {
     name: 'LinkedIn',
     domain: 'linkedin.com',
@@ -311,7 +478,7 @@ export class JobBoardDetector {
 
   private detectJobBoard(): void {
     const hostname = window.location.hostname.toLowerCase();
-    
+
     for (const [key, board] of Object.entries(JOB_BOARDS)) {
       if (hostname.includes(board.domain)) {
         this.currentBoard = board;

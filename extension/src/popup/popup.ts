@@ -1,4 +1,6 @@
 // Popup JavaScript functionality
+// Declare chrome for MV3 popup context
+declare const chrome: any;
 import apiService from '../services/api.js';
 
 console.log('Job AutoFill popup loaded');
@@ -56,7 +58,7 @@ function initializeElements() {
   profileComplete = document.getElementById('profile-complete')!;
   optionsBtn = document.getElementById('options-btn')!;
   helpBtn = document.getElementById('help-btn')!;
-  
+
   // New authentication and feature elements
   loginSection = document.getElementById('login-section')!;
   authenticatedSection = document.getElementById('authenticated-section')!;
@@ -69,7 +71,7 @@ function initializeElements() {
 async function checkAuthenticationStatus() {
   try {
     isAuthenticated = apiService.isAuthenticated();
-    
+
     if (isAuthenticated) {
       const profileResponse = await apiService.getProfile();
       if (profileResponse.success) {
@@ -101,12 +103,12 @@ function showUnauthenticatedUI() {
 
 function updateProfileStatus() {
   if (userProfile && profileComplete && profileIncomplete) {
-    const hasBasicInfo = userProfile.personalInfo?.firstName && 
-                        userProfile.personalInfo?.lastName && 
+    const hasBasicInfo = userProfile.personalInfo?.firstName &&
+                        userProfile.personalInfo?.lastName &&
                         userProfile.personalInfo?.email;
     const hasExperience = userProfile.experience?.length > 0;
     const hasSkills = userProfile.skills?.length > 0;
-    
+
     if (hasBasicInfo && hasExperience && hasSkills) {
       profileComplete.style.display = 'block';
       profileIncomplete.style.display = 'none';
@@ -155,25 +157,25 @@ function updateAnalyticsDisplay(analytics: any) {
 function setupEventListeners() {
   // Auto-fill button
   autoFillBtn.addEventListener('click', handleAutoFill);
-  
+
   // Scan page button
   scanPageBtn.addEventListener('click', handleScanPage);
-  
+
   // Save application button
   saveApplicationBtn.addEventListener('click', handleSaveApplication);
-  
+
   // Webcam capture button
   const webcamCaptureBtn = document.getElementById('webcam-capture-btn');
   webcamCaptureBtn?.addEventListener('click', handleWebcamCapture);
-  
+
   // Settings toggles
   autoFillToggle.addEventListener('change', handleAutoFillToggle);
   aiAssistToggle.addEventListener('change', handleAiAssistToggle);
-  
+
   // Setup profile button
   const setupProfileBtn = document.getElementById('setup-profile-btn');
   setupProfileBtn?.addEventListener('click', handleSetupProfile);
-  
+
   // Options and help buttons
   optionsBtn.addEventListener('click', handleOpenOptions);
   helpBtn.addEventListener('click', handleOpenHelp);
@@ -182,12 +184,12 @@ function setupEventListeners() {
 async function loadSettings() {
   try {
     const result = await chrome.storage.sync.get(['settings', 'userProfile']);
-    
+
     if (result.settings) {
       autoFillToggle.checked = result.settings.autoFillEnabled ?? true;
       aiAssistToggle.checked = result.settings.aiAssistanceEnabled ?? true;
     }
-    
+
     // Check profile status
     if (result.userProfile && isProfileComplete(result.userProfile)) {
       profileIncomplete.style.display = 'none';
@@ -202,9 +204,9 @@ async function loadSettings() {
 }
 
 function isProfileComplete(profile: any): boolean {
-  return profile && 
-         profile.personalInfo?.firstName && 
-         profile.personalInfo?.lastName && 
+  return profile &&
+         profile.personalInfo?.firstName &&
+         profile.personalInfo?.lastName &&
          profile.personalInfo?.email &&
          profile.experience?.length > 0;
 }
@@ -212,20 +214,20 @@ function isProfileComplete(profile: any): boolean {
 async function analyzeCurrentPage() {
   try {
     showLoading();
-    
+
     // Get current active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
+
     if (!tab || !tab.id) {
       showError('Unable to access current tab');
       return;
     }
-    
+
     // Send message to content script to analyze page
-    const response: any = await chrome.tabs.sendMessage(tab.id, { 
-      type: 'ANALYZE_PAGE' 
+    const response: any = await chrome.tabs.sendMessage(tab.id, {
+      type: 'ANALYZE_PAGE'
     });
-    
+
     if (response && response.success) {
       displayAnalysisResult(response.data);
     } else {
@@ -246,7 +248,7 @@ function showLoading() {
 
 function displayAnalysisResult(data: any) {
   loadingAnalysis.style.display = 'none';
-  
+
   if (data.formsFound > 0) {
     formCount.textContent = data.formsFound.toString();
     formsDetected.style.display = 'block';
@@ -275,7 +277,7 @@ function showError(message: string) {
 function updateStatus(text: string, type: 'success' | 'warning' | 'error') {
   const statusText = statusIndicator.querySelector('.status-text')!;
   statusText.textContent = text;
-  
+
   // Update status indicator class
   statusIndicator.className = 'status-indicator';
   statusIndicator.classList.add(`status-${type}`);
@@ -286,17 +288,17 @@ async function handleAutoFill() {
     updateStatus('Filling forms...', 'warning');
     autoFillBtn.textContent = 'Filling...';
     autoFillBtn.disabled = true;
-    
+
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
+
     if (!tab || !tab.id) {
       throw new Error('Unable to access current tab');
     }
-    
-    const response: any = await chrome.tabs.sendMessage(tab.id, { 
-      type: 'AUTO_FILL_FORMS' 
+
+    const response: any = await chrome.tabs.sendMessage(tab.id, {
+      type: 'AUTO_FILL_FORMS'
     });
-    
+
     if (response && response.success) {
       updateStatus('Forms filled', 'success');
       autoFillBtn.innerHTML = '<span class="icon">✅</span>Forms Filled';
@@ -309,7 +311,7 @@ async function handleAutoFill() {
     autoFillBtn.innerHTML = '<span class="icon">🤖</span>Auto Fill Forms';
   } finally {
     autoFillBtn.disabled = false;
-    
+
     // Reset button after 3 seconds
     setTimeout(() => {
       autoFillBtn.innerHTML = '<span class="icon">🤖</span>Auto Fill Forms';
@@ -324,15 +326,15 @@ async function handleScanPage() {
 async function handleSaveApplication() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
+
     if (!tab || !tab.id) {
       throw new Error('Unable to access current tab');
     }
-    
-    const response: any = await chrome.tabs.sendMessage(tab.id, { 
-      type: 'SAVE_APPLICATION' 
+
+    const response: any = await chrome.tabs.sendMessage(tab.id, {
+      type: 'SAVE_APPLICATION'
     });
-    
+
     if (response && response.success) {
       updateStatus('Application saved', 'success');
     } else {
@@ -351,13 +353,13 @@ async function handleAutoFillToggle() {
       ...settings.settings,
       autoFillEnabled: autoFillToggle.checked
     };
-    
+
     await chrome.storage.sync.set({ settings: newSettings });
-    
+
     // Send message to content script
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab && tab.id) {
-      chrome.tabs.sendMessage(tab.id, { 
+      chrome.tabs.sendMessage(tab.id, {
         type: 'SETTINGS_UPDATED',
         data: newSettings
       });
@@ -374,7 +376,7 @@ async function handleAiAssistToggle() {
       ...settings.settings,
       aiAssistanceEnabled: aiAssistToggle.checked
     };
-    
+
     await chrome.storage.sync.set({ settings: newSettings });
   } catch (error) {
     console.error('Error updating AI assist setting:', error);
