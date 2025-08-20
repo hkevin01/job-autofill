@@ -84,7 +84,7 @@ jobs:
         run: cr extension/src --format json --output extension-complexity.json
 
       - name: Upload complexity reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: complexity-reports
           path: |
@@ -175,7 +175,7 @@ jobs:
           npm run benchmark || echo "Benchmark suite not implemented yet"
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: performance-benchmarks
