@@ -62,6 +62,8 @@
         "content-scripts/utils.js",
         "content-scripts/ats-adapters.js",
         "content-scripts/form-detector.js",
+        "content-scripts/debug-overlay.js",
+        "content-scripts/resilient-filler.js",
         "content-scripts/form-filler.js"
       ],
       "css": ["content-scripts/styles.css"],

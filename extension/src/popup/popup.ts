@@ -17,6 +17,9 @@ let scanPageBtn: HTMLElement;
 let saveApplicationBtn: HTMLElement;
 let autoFillToggle: HTMLInputElement;
 let aiAssistToggle: HTMLInputElement;
+let enhancedModeToggle: HTMLInputElement;
+let enhancedModeSection: HTMLElement;
+let launchEnhancedBtn: HTMLElement;
 let profileIncomplete: HTMLElement;
 let profileComplete: HTMLElement;
 let optionsBtn: HTMLElement;
@@ -54,6 +57,9 @@ function initializeElements() {
   saveApplicationBtn = document.getElementById('save-application-btn')!;
   autoFillToggle = document.getElementById('auto-fill-toggle') as HTMLInputElement;
   aiAssistToggle = document.getElementById('ai-assist-toggle') as HTMLInputElement;
+  enhancedModeToggle = document.getElementById('enhanced-mode-toggle') as HTMLInputElement;
+  enhancedModeSection = document.getElementById('enhanced-mode-section')!;
+  launchEnhancedBtn = document.getElementById('launch-enhanced-btn')!;
   profileIncomplete = document.getElementById('profile-incomplete')!;
   profileComplete = document.getElementById('profile-complete')!;
   optionsBtn = document.getElementById('options-btn')!;
@@ -172,6 +178,10 @@ function setupEventListeners() {
   // Settings toggles
   autoFillToggle.addEventListener('change', handleAutoFillToggle);
   aiAssistToggle.addEventListener('change', handleAiAssistToggle);
+  enhancedModeToggle.addEventListener('change', handleEnhancedModeToggle);
+
+  // Enhanced mode button
+  launchEnhancedBtn.addEventListener('click', handleLaunchEnhanced);
 
   // Setup profile button
   const setupProfileBtn = document.getElementById('setup-profile-btn');
@@ -189,6 +199,10 @@ async function loadSettings() {
     if (result.settings) {
       autoFillToggle.checked = result.settings.autoFillEnabled ?? true;
       aiAssistToggle.checked = result.settings.aiAssistanceEnabled ?? true;
+      enhancedModeToggle.checked = result.settings.enhancedModeEnabled ?? false;
+
+      // Show/hide enhanced mode section
+      enhancedModeSection.style.display = result.settings.enhancedModeEnabled ? 'block' : 'none';
     }
 
     // Check profile status
@@ -413,4 +427,60 @@ function handleWebcamCapture() {
     url: chrome.runtime.getURL('webcam/webcam-capture.html'),
   });
   window.close();
+}
+
+async function handleEnhancedModeToggle() {
+  const isEnabled = enhancedModeToggle.checked;
+
+  // Save enhanced mode setting
+  try {
+    const result = await chrome.storage.sync.get(['settings']);
+    const settings = result.settings || {};
+    settings.enhancedModeEnabled = isEnabled;
+    await chrome.storage.sync.set({ settings });
+
+    // Show/hide enhanced mode section
+    enhancedModeSection.style.display = isEnabled ? 'block' : 'none';
+
+    console.log('Enhanced mode:', isEnabled ? 'enabled' : 'disabled');
+  } catch (error) {
+    console.error('Failed to save enhanced mode setting:', error);
+  }
+}
+
+async function handleLaunchEnhanced() {
+  try {
+    // Get current tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab?.id) {
+      console.error('No active tab found');
+      return;
+    }
+
+    // Check if this is a job application page
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      type: 'STATUS_REQUEST',
+    });
+
+    if (response?.data?.formsDetected > 0) {
+      // Open enhanced popup in a new window
+      const popupWindow = await chrome.windows.create({
+        url: chrome.runtime.getURL('popup/enhanced-popup.html'),
+        type: 'popup',
+        width: 450,
+        height: 650,
+        focused: true,
+      });
+
+      console.log('Enhanced popup opened in window:', popupWindow.id);
+      window.close();
+    } else {
+      // Show message that no forms were detected
+      updateStatus('No job application forms detected on this page', 'warning');
+    }
+  } catch (error) {
+    console.error('Failed to launch enhanced mode:', error);
+    updateStatus('Failed to launch enhanced mode', 'error');
+  }
 }
