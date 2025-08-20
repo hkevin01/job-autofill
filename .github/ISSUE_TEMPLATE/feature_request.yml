@@ -1,0 +1,160 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Job AutoFill
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature! 🚀
+
+        Please provide as much detail as possible to help us understand your request.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-flight Checklist
+      description: Please confirm you have done the following
+      options:
+        - label: I have searched existing issues to see if this feature has already been requested
+          required: true
+        - label: I have checked the documentation to see if this feature already exists
+          required: true
+        - label: This feature request is related to Job AutoFill's core functionality
+          required: true
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of what you want to happen
+      placeholder: Describe the feature you'd like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What pain point does it address?
+      placeholder: |
+        I'm always frustrated when...
+        Currently, I have to...
+        It would be much better if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: A clear and concise description of how you think this feature should work
+      placeholder: |
+        The feature should work like this:
+        1. User does X
+        2. System responds with Y
+        3. Result is Z
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific scenarios where this feature would be useful
+      placeholder: |
+        Scenario 1: When applying to tech companies...
+        Scenario 2: For remote job applications...
+        Scenario 3: When filling out long application forms...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my workflow
+        - High - Critical for my use case
+        - Critical - Blocking my ability to use the extension
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Simple - Minor UI change or small enhancement
+        - Medium - New functionality but straightforward
+        - Complex - Major new feature requiring significant work
+        - Not sure
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component/Area
+      description: Which part of Job AutoFill would this feature affect?
+      options:
+        - Chrome Extension - UI/Popup
+        - Chrome Extension - Content Scripts
+        - Chrome Extension - Form Detection
+        - Chrome Extension - Auto-filling
+        - Backend API
+        - AI/OpenAI Integration
+        - User Profile Management
+        - Template System
+        - Settings/Preferences
+        - Documentation
+        - Other
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Describe any alternative solutions or features you've considered
+      placeholder: |
+        Alternative 1: Instead of this feature, we could...
+        Alternative 2: Another approach would be...
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups/Wireframes
+      description: If you have any mockups, wireframes, or visual examples, please share them
+      placeholder: Drag and drop images here or describe the UI layout...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request
+      placeholder: |
+        Links to similar features in other tools:
+        Screenshots of the current behavior:
+        Any other relevant information:
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help implement this feature
+        - label: I would be willing to help with testing this feature
+        - label: I would be willing to help with documentation for this feature
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria (Optional)
+      description: If you have specific criteria for when this feature would be considered complete, please list them
+      placeholder: |
+        This feature would be complete when:
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3

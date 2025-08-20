@@ -1,0 +1,180 @@
+name: Job Site Support Request
+description: Request support for a new job board or ATS (Applicant Tracking System)
+title: "[Job Site]: Add support for "
+labels: ["job-site-support", "enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us expand Job AutoFill's compatibility! 🎯
+
+        This template is for requesting support for new job boards or ATS platforms.
+
+  - type: input
+    id: site-name
+    attributes:
+      label: Job Site/Platform Name
+      description: What is the name of the job site or ATS platform?
+      placeholder: e.g. "Workday", "BambooHR", "company-careers.com"
+    validations:
+      required: true
+
+  - type: input
+    id: site-url
+    attributes:
+      label: Site URL
+      description: What is the main URL of the job site or ATS?
+      placeholder: e.g. https://example.workday.com or https://careers.company.com
+    validations:
+      required: true
+
+  - type: dropdown
+    id: site-type
+    attributes:
+      label: Platform Type
+      description: What type of platform is this?
+      options:
+        - Job Board (e.g., Indeed, LinkedIn)
+        - Company ATS (e.g., Workday, Greenhouse)
+        - Recruiting Platform (e.g., AngelList, Hired)
+        - Government Portal
+        - University Career Center
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: example-urls
+    attributes:
+      label: Example Job Posting URLs
+      description: Please provide 2-3 example URLs of actual job postings on this platform
+      placeholder: |
+        1. https://example.com/job/software-engineer-123
+        2. https://example.com/job/product-manager-456
+        3. https://example.com/job/data-scientist-789
+    validations:
+      required: true
+
+  - type: dropdown
+    id: popularity
+    attributes:
+      label: Platform Popularity
+      description: How popular/widely used is this platform?
+      options:
+        - Very Popular - Used by many major companies
+        - Moderately Popular - Used by some companies in specific industries
+        - Niche - Used by specific types of companies or regions
+        - Company-Specific - Used by one or few companies
+        - Not Sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: form-fields
+    attributes:
+      label: Common Form Fields
+      description: What types of form fields are typically found on this platform's job applications?
+      placeholder: |
+        - Personal Information (Name, Email, Phone)
+        - Resume Upload
+        - Cover Letter (text area)
+        - Work Experience sections
+        - Education sections
+        - Skills/Technologies
+        - Availability/Start Date
+        - Salary Expectations
+        - Custom Questions
+        - etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: form-structure
+    attributes:
+      label: Application Form Structure
+      description: Describe the structure and flow of the application process
+      placeholder: |
+        Describe the application flow:
+        1. Land on job posting page
+        2. Click "Apply" button
+        3. Login/Registration step (if required)
+        4. Fill personal information
+        5. Upload resume/documents
+        6. Answer screening questions
+        7. Submit application
+
+        Are there multiple pages/steps? Does it use a wizard interface?
+    validations:
+      required: true
+
+  - type: textarea
+    id: unique-features
+    attributes:
+      label: Unique Features or Challenges
+      description: Are there any unique features, quirks, or challenges with this platform?
+      placeholder: |
+        - Uses unusual form elements or JavaScript frameworks
+        - Has complex multi-step workflow
+        - Requires specific file formats
+        - Has dynamic content loading
+        - Uses custom form controls
+        - Has anti-automation measures
+        - etc.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is support for this platform?
+      options:
+        - High - I encounter this platform frequently
+        - Medium - I see this platform occasionally
+        - Low - I rarely see this platform but it would be nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Please provide screenshots of the job posting page and application form
+      placeholder: |
+        Screenshots help us understand the platform's structure:
+        1. Job posting page
+        2. Application form (first page)
+        3. Additional form pages (if any)
+        4. Any unique or challenging elements
+
+        Drag and drop images here or paste them below.
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any other information that might be helpful
+      placeholder: |
+        - Industry focus (tech, healthcare, finance, etc.)
+        - Geographic focus (US, Europe, specific countries)
+        - Company size that typically uses this platform
+        - Any known technical details about the platform
+        - Similar platforms it might be related to
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help test support for this platform
+        - label: I can provide additional examples or access for testing
+        - label: I have technical knowledge that might help with implementation
+
+  - type: checkboxes
+    id: urgency
+    attributes:
+      label: Urgency (Check if applicable)
+      options:
+        - label: I'm actively applying to jobs on this platform
+        - label: This platform is blocking my ability to use Job AutoFill effectively
+        - label: Multiple people have requested support for this platform

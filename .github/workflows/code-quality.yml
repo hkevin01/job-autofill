@@ -1,0 +1,182 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 2 * * 1" # Run weekly on Mondays at 2 AM
+
+jobs:
+  # TypeScript strict mode check
+  typescript-strict:
+    name: TypeScript Strict Mode
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript strict check
+        run: npx tsc --noEmit --strict
+
+  # Dependency vulnerability scan
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level moderate
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium
+
+  # Code complexity analysis
+  complexity-analysis:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install complexity analyzer
+        run: npm install -g complexity-report
+
+      - name: Analyze backend complexity
+        run: cr backend/src --format json --output backend-complexity.json
+
+      - name: Analyze extension complexity
+        run: cr extension/src --format json --output extension-complexity.json
+
+      - name: Upload complexity reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: complexity-reports
+          path: |
+            backend-complexity.json
+            extension-complexity.json
+
+  # Bundle size analysis
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build:extension
+
+      - name: Analyze bundle size
+        run: |
+          npx webpack-bundle-analyzer extension/dist/content-scripts.js --report --format json --out bundle-report.json
+          ls -la extension/dist/
+
+      - name: Comment bundle size on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Get bundle sizes
+            const distDir = path.join(process.cwd(), 'extension/dist');
+            const files = fs.readdirSync(distDir);
+
+            let bundleInfo = '## Bundle Size Report\n\n';
+            bundleInfo += '| File | Size |\n';
+            bundleInfo += '|------|------|\n';
+
+            files.forEach(file => {
+              if (file.endsWith('.js')) {
+                const filePath = path.join(distDir, file);
+                const stats = fs.statSync(filePath);
+                const sizeKB = (stats.size / 1024).toFixed(2);
+                bundleInfo += `| ${file} | ${sizeKB} KB |\n`;
+              }
+            });
+
+            // Comment on PR
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: bundleInfo
+            });
+
+  # Performance benchmarks
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build:backend
+
+      - name: Run performance benchmarks
+        run: |
+          cd backend
+          npm run benchmark || echo "Benchmark suite not implemented yet"
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-benchmarks
+          path: backend/benchmark-results.json

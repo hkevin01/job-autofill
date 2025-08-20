@@ -1,0 +1,46 @@
+# ========================================
+# Development Dockerfile for Job AutoFill Backend
+# ========================================
+
+FROM node:18-alpine AS development
+
+# Install development tools
+RUN apk add --no-cache dumb-init
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY backend/package*.json ./backend/
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN cd backend && npm ci
+
+# Copy source code
+COPY backend/ ./backend/
+
+# Expose ports
+EXPOSE 3000 9229
+
+# Set environment
+ENV NODE_ENV=development
+
+# Create non-root user for development
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S jobautofill -u 1001
+
+# Change ownership of the app directory
+RUN chown -R jobautofill:nodejs /app
+
+# Switch to non-root user
+USER jobautofill
+
+# Set working directory
+WORKDIR /app/backend
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start in development mode with debugging
+CMD ["npm", "run", "dev:docker"]
