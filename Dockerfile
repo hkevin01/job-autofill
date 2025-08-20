@@ -3,7 +3,7 @@
 # ========================================
 
 # Stage 1: Build Dependencies
-FROM node:18-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY package*.json ./
 RUN cd backend && npm ci --only=production && npm cache clean --force
 
 # Stage 2: Build Application
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -33,7 +33,7 @@ COPY backend/ ./backend/
 RUN cd backend && npm run build
 
 # Stage 3: Production Image
-FROM node:18-alpine AS production
+FROM node:24-alpine AS production
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
