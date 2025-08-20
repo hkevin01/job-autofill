@@ -3,6 +3,12 @@
 declare const chrome: any;
 import apiService from '../services/api';
 
+// Import enhanced components
+import { messenger } from '../services/messaging';
+import { debugOverlay } from './debug-overlay';
+import { formDetector } from './form-detector';
+import { resilientFiller } from './resilient-filler';
+
 interface UserProfile {
   personalInfo: {
     firstName: string;
@@ -73,6 +79,161 @@ class EnhancedFormFiller {
     this.setupMessageListener();
     this.initializeApiConnection();
     this.initializeAuthToken();
+    this.initializeEnhancedComponents();
+  }
+
+  private initializeEnhancedComponents(): void {
+    console.log('🚀 Initializing Enhanced Form Filler Components');
+
+    // Setup enhanced message handlers
+    this.setupEnhancedMessageHandlers();
+
+    // Setup debug overlay with keyboard shortcut
+    this.setupDebugKeyboard();
+
+    // Initialize resilient filler
+    console.log('🔧 Framework detection:', resilientFiller.getFrameworkInfo());
+
+    // Start automatic detection
+    this.startAutoDetection();
+  }
+
+  private setupEnhancedMessageHandlers(): void {
+    // Form detection requests
+    messenger.onFormDetectionRequest(async () => {
+      const forms = formDetector.getDetectedForms();
+      const fields = formDetector.getDetectedFields();
+
+      return {
+        forms,
+        fields,
+        platform: forms[0]?.platform || 'Unknown',
+        confidence: forms[0]?.confidence || 0,
+      };
+    });
+
+    // Auto-fill requests with enhanced resilient filling
+    messenger.onAutoFillRequest(async message => {
+      if (!message.data?.fieldMappings) {
+        throw new Error('No field mappings provided');
+      }
+
+      return await this.executeEnhancedAutoFill(message.data.fieldMappings);
+    });
+
+    // Debug toggle requests
+    messenger.onDebugToggle(async message => {
+      if (message.data?.enabled) {
+        debugOverlay.show();
+      } else {
+        debugOverlay.hide();
+      }
+
+      return { success: true };
+    });
+
+    // Status requests
+    messenger.onStatusRequest(async () => {
+      const forms = formDetector.getDetectedForms();
+
+      return {
+        isActive: forms.length > 0,
+        formsDetected: forms.length,
+        currentPlatform: forms[0]?.platform || 'Unknown',
+        lastScan: new Date().toISOString(),
+      };
+    });
+  }
+
+  private setupDebugKeyboard(): void {
+    document.addEventListener('keydown', e => {
+      // Ctrl+Shift+J to toggle debug overlay
+      if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+        debugOverlay.toggle();
+      }
+    });
+  }
+
+  private startAutoDetection(): void {
+    // Run initial detection
+    this.detectFormsEnhanced();
+
+    // Setup periodic detection
+    setInterval(() => {
+      this.detectFormsEnhanced();
+    }, 5000);
+
+    // Detect on navigation changes
+    let lastUrl = location.href;
+    setInterval(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        setTimeout(() => this.detectFormsEnhanced(), 1000);
+      }
+    }, 1000);
+  }
+
+  private detectFormsEnhanced(): void {
+    try {
+      const forms = formDetector.scanForForms();
+
+      if (forms.length > 0) {
+        console.log(
+          `✅ Enhanced detection: ${forms.length} job application form(s) on ${forms[0].platform}`
+        );
+      }
+    } catch (error) {
+      console.error('Enhanced form detection error:', error);
+    }
+  }
+
+  private async executeEnhancedAutoFill(fieldMappings: Record<string, string>): Promise<any> {
+    this.analytics.startTime = Date.now();
+    this.currentRunChanges = [];
+    this.undoStack = [];
+
+    try {
+      console.log('🚀 Starting enhanced auto-fill process with resilient filling');
+
+      // Send initial status
+      messenger.sendAutoFillStatus('started', 0, 0, Object.keys(fieldMappings).length);
+
+      // Execute resilient filling
+      const result = await resilientFiller.fillForm(fieldMappings, {
+        humanLike: true,
+        validateAfterFill: true,
+        scrollIntoView: true,
+        retryAttempts: 3,
+      });
+
+      // Track analytics
+      this.analytics.formFieldsFilled = result.summary.successful;
+      await this.trackFormFillAnalytics();
+
+      // Send progress updates
+      const { successful, total } = result.summary;
+      const progress = total > 0 ? (successful / total) * 100 : 0;
+
+      messenger.sendAutoFillStatus('completed', progress, successful, total);
+
+      console.log(`✅ Enhanced auto-fill completed: ${successful}/${total} fields filled`);
+
+      return {
+        success: true,
+        summary: result.summary,
+        results: result.results.map(r => ({
+          field: r.field.tagName,
+          success: r.success,
+          attempts: r.attempts,
+          errors: r.errors,
+        })),
+      };
+    } catch (error) {
+      console.error('Enhanced auto-fill failed:', error);
+      messenger.sendAutoFillStatus('error', 0, 0, 0);
+      throw error;
+    }
   }
 
   private async loadUserData(): Promise<void> {
