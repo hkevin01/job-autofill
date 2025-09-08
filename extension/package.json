@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
-    "@types/node": "^20.11.24",
+    "@types/node": "^24.3.1",
     "typescript": "^5.4.2",
     "webpack": "^5.90.3",
     "webpack-cli": "^5.1.4",
