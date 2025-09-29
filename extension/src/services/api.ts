@@ -144,9 +144,10 @@ class ApiService {
   private authToken: string | null = null;
 
   constructor() {
-    this.baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://api.jobautofill.com/api' 
-      : 'http://localhost:3000/api';
+    this.baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://api.jobautofill.com/api'
+        : 'http://localhost:3000/api';
     this.loadAuthToken();
   }
 
@@ -189,10 +190,7 @@ class ApiService {
     return headers;
   }
 
-  private async request<T>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
       const response = await fetch(url, {
@@ -215,9 +213,9 @@ class ApiService {
       return { success: true, data };
     } catch (error) {
       console.error(`API request failed for ${endpoint}:`, error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -300,7 +298,10 @@ class ApiService {
     });
   }
 
-  async generateResponse(prompt: string, context?: any): Promise<ApiResponse<{ response: string }>> {
+  async generateResponse(
+    prompt: string,
+    context?: any
+  ): Promise<ApiResponse<{ response: string }>> {
     return this.request('/ai/generate-response', {
       method: 'POST',
       body: JSON.stringify({ prompt, context }),
@@ -381,7 +382,7 @@ class ApiService {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': this.authToken ? `Bearer ${this.authToken}` : '',
+          Authorization: this.authToken ? `Bearer ${this.authToken}` : '',
         },
         body: formData,
       });
@@ -394,9 +395,9 @@ class ApiService {
       return { success: true, data };
     } catch (error) {
       console.error('Resume parsing failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Resume parsing failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Resume parsing failed',
       };
     }
   }
@@ -418,7 +419,7 @@ class ApiService {
       body: JSON.stringify({
         jobDescription,
         resumeData,
-        formFields
+        formFields,
       }),
     });
   }
@@ -435,7 +436,7 @@ class ApiService {
         jobDescription,
         companyName,
         position,
-        resumeData
+        resumeData,
       }),
     });
   }
@@ -447,7 +448,9 @@ class ApiService {
     });
   }
 
-  async detectATSPlatform(url: string): Promise<ApiResponse<{ platform: string; confidence: number }>> {
+  async detectATSPlatform(
+    url: string
+  ): Promise<ApiResponse<{ platform: string; confidence: number }>> {
     return this.request<{ platform: string; confidence: number }>('/ats/detect-platform', {
       method: 'POST',
       body: JSON.stringify({ url }),
@@ -520,13 +523,16 @@ class ApiService {
     return this.request(`/applications/analytics${params}`);
   }
 
-  async submitApplicationFeedback(id: string, feedback: {
-    satisfaction: number;
-    aiAccuracy: number;
-    timeEfficiency: number;
-    wouldRecommend: boolean;
-    comments?: string;
-  }): Promise<ApiResponse<any>> {
+  async submitApplicationFeedback(
+    id: string,
+    feedback: {
+      satisfaction: number;
+      aiAccuracy: number;
+      timeEfficiency: number;
+      wouldRecommend: boolean;
+      comments?: string;
+    }
+  ): Promise<ApiResponse<any>> {
     return this.request(`/applications/${id}/feedback`, {
       method: 'POST',
       body: JSON.stringify(feedback),

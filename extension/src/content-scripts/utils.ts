@@ -591,7 +591,7 @@ export class LocalResumeParser {
         education: this.extractEducation(sections),
         skills: this.extractSkills(sections),
         certifications: this.extractCertifications(sections),
-        projects: this.extractProjects(sections)
+        projects: this.extractProjects(sections),
       };
     } catch (error) {
       console.error('Local resume parsing failed:', error);
@@ -601,16 +601,20 @@ export class LocalResumeParser {
 
   private extractSections(text: string): Record<string, string> {
     const sections: Record<string, string> = {};
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const lines = text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line);
 
     // Common section headers (case-insensitive)
     const sectionPatterns = {
-      experience: /^(experience|work\s*experience|professional\s*experience|employment\s*history|career\s*history)$/i,
+      experience:
+        /^(experience|work\s*experience|professional\s*experience|employment\s*history|career\s*history)$/i,
       education: /^(education|academic\s*background|qualifications)$/i,
       skills: /^(skills|technical\s*skills|core\s*competencies|abilities|proficiencies)$/i,
       summary: /^(summary|professional\s*summary|objective|career\s*objective|profile)$/i,
       projects: /^(projects|personal\s*projects|portfolio|achievements)$/i,
-      certifications: /^(certifications|certificates|licenses|credentials)$/i
+      certifications: /^(certifications|certificates|licenses|credentials)$/i,
     };
 
     let currentSection = '';
@@ -626,7 +630,7 @@ export class LocalResumeParser {
           if (currentSection && currentContent.length > 0) {
             sections[currentSection] = currentContent.join('\n');
           }
-          
+
           currentSection = section;
           currentContent = [];
           foundSection = true;
@@ -657,7 +661,9 @@ export class LocalResumeParser {
     }
 
     // Extract phone (various formats)
-    const phoneMatch = text.match(/(\+?1?[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
+    const phoneMatch = text.match(
+      /(\+?1?[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/
+    );
     if (phoneMatch) {
       personalInfo.phone = phoneMatch[0];
     }
@@ -675,14 +681,20 @@ export class LocalResumeParser {
     }
 
     // Extract name (first meaningful line)
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const lines = text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line);
     for (const line of lines) {
-      if (line.length > 2 && line.length < 50 && 
-          !line.includes('@') && 
-          !line.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/) &&
-          !line.toLowerCase().includes('linkedin') &&
-          !line.toLowerCase().includes('github') &&
-          !line.toLowerCase().includes('resume')) {
+      if (
+        line.length > 2 &&
+        line.length < 50 &&
+        !line.includes('@') &&
+        !line.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/) &&
+        !line.toLowerCase().includes('linkedin') &&
+        !line.toLowerCase().includes('github') &&
+        !line.toLowerCase().includes('resume')
+      ) {
         personalInfo.fullName = line;
         break;
       }
@@ -702,12 +714,17 @@ export class LocalResumeParser {
     const experiences: any[] = [];
 
     // Split by company/position blocks (lines starting with capital letters)
-    const blocks = experienceText.split(/\n(?=[A-Z][a-zA-Z\s&,.-]+(?:\s+\|\s+|\s+at\s+|\s+-\s+|\n))/);
+    const blocks = experienceText.split(
+      /\n(?=[A-Z][a-zA-Z\s&,.-]+(?:\s+\|\s+|\s+at\s+|\s+-\s+|\n))/
+    );
 
     for (const block of blocks) {
       if (block.trim().length < 10) continue;
 
-      const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+      const lines = block
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line);
       if (lines.length < 2) continue;
 
       const experience: any = {
@@ -717,7 +734,7 @@ export class LocalResumeParser {
         endDate: '',
         description: '',
         achievements: [],
-        technologies: []
+        technologies: [],
       };
 
       // Extract dates first
@@ -748,14 +765,14 @@ export class LocalResumeParser {
       }
 
       // Extract description and achievements
-      const descriptionLines = lines.slice(2).filter(line => 
-        !datePattern.test(line) && line.length > 10
-      );
-      
+      const descriptionLines = lines
+        .slice(2)
+        .filter(line => !datePattern.test(line) && line.length > 10);
+
       experience.description = descriptionLines.join(' ');
-      experience.achievements = descriptionLines.filter(line => 
-        line.startsWith('•') || line.startsWith('-') || line.startsWith('*')
-      ).map(line => line.replace(/^[•\-*]\s*/, ''));
+      experience.achievements = descriptionLines
+        .filter(line => line.startsWith('•') || line.startsWith('-') || line.startsWith('*'))
+        .map(line => line.replace(/^[•\-*]\s*/, ''));
 
       experiences.push(experience);
     }
@@ -769,15 +786,18 @@ export class LocalResumeParser {
     const educationText = sections.education;
     const education: any[] = [];
 
-    const lines = educationText.split('\n').map(line => line.trim()).filter(line => line);
+    const lines = educationText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line);
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // Look for degree patterns
       const degreePatterns = [
         /\b(bachelor|master|phd|doctorate|associate|diploma|certificate)\b/i,
-        /\b(b\.?s\.?|m\.?s\.?|b\.?a\.?|m\.?a\.?|ph\.?d\.?)\b/i
+        /\b(b\.?s\.?|m\.?s\.?|b\.?a\.?|m\.?a\.?|ph\.?d\.?)\b/i,
       ];
 
       if (degreePatterns.some(pattern => pattern.test(line))) {
@@ -785,7 +805,7 @@ export class LocalResumeParser {
           institution: '',
           degree: line,
           field: '',
-          graduationDate: ''
+          graduationDate: '',
         };
 
         // Look for institution in surrounding lines
@@ -824,13 +844,19 @@ export class LocalResumeParser {
     const categories = skillsText.split(/\n(?=[A-Z][a-zA-Z\s]+:)/);
 
     for (const category of categories) {
-      const lines = category.split('\n').map(line => line.trim()).filter(line => line);
+      const lines = category
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line);
       if (lines.length === 0) continue;
 
       const firstLine = lines[0];
-      const categoryName = firstLine.includes(':') ? firstLine.replace(':', '').trim() : 'Technical Skills';
-      
-      const skillItems = lines.slice(firstLine.includes(':') ? 1 : 0)
+      const categoryName = firstLine.includes(':')
+        ? firstLine.replace(':', '').trim()
+        : 'Technical Skills';
+
+      const skillItems = lines
+        .slice(firstLine.includes(':') ? 1 : 0)
         .join(' ')
         .split(/[,;•\-]/)
         .map(skill => skill.trim())
@@ -839,7 +865,7 @@ export class LocalResumeParser {
       if (skillItems.length > 0) {
         skills.push({
           category: categoryName,
-          items: skillItems
+          items: skillItems,
         });
       }
     }
@@ -854,7 +880,7 @@ export class LocalResumeParser {
       if (allSkills.length > 0) {
         skills.push({
           category: 'Technical Skills',
-          items: allSkills
+          items: allSkills,
         });
       }
     }
@@ -868,7 +894,10 @@ export class LocalResumeParser {
     const certText = sections.certifications;
     const certifications: any[] = [];
 
-    const lines = certText.split('\n').map(line => line.trim()).filter(line => line);
+    const lines = certText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line);
 
     for (const line of lines) {
       if (line.length < 5) continue;
@@ -876,7 +905,7 @@ export class LocalResumeParser {
       const cert: any = {
         name: line,
         issuer: '',
-        date: ''
+        date: '',
       };
 
       // Extract date
@@ -889,7 +918,7 @@ export class LocalResumeParser {
       const issuerPatterns = [
         /by\s+([A-Za-z\s&,.]+)/i,
         /from\s+([A-Za-z\s&,.]+)/i,
-        /-\s+([A-Za-z\s&,.]+)/
+        /-\s+([A-Za-z\s&,.]+)/,
       ];
 
       for (const pattern of issuerPatterns) {
@@ -917,30 +946,36 @@ export class LocalResumeParser {
     const blocks = projectsText.split(/\n(?=[A-Z][a-zA-Z\s-]+:|\n\s*-\s*[A-Z])/);
 
     for (const block of blocks) {
-      const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+      const lines = block
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line);
       if (lines.length < 2) continue;
 
       const project: any = {
         name: lines[0].replace(/^-\s*|:$/, '').trim(),
         description: '',
         technologies: [],
-        link: ''
+        link: '',
       };
 
       // Extract description
-      const descLines = lines.slice(1).filter(line => 
-        !line.toLowerCase().includes('technologies:') &&
-        !line.toLowerCase().includes('tech stack:') &&
-        !line.includes('http')
-      );
+      const descLines = lines
+        .slice(1)
+        .filter(
+          line =>
+            !line.toLowerCase().includes('technologies:') &&
+            !line.toLowerCase().includes('tech stack:') &&
+            !line.includes('http')
+        );
       project.description = descLines.join(' ');
 
       // Extract technologies
-      const techLine = lines.find(line => 
-        line.toLowerCase().includes('technologies:') ||
-        line.toLowerCase().includes('tech stack:')
+      const techLine = lines.find(
+        line =>
+          line.toLowerCase().includes('technologies:') || line.toLowerCase().includes('tech stack:')
       );
-      
+
       if (techLine) {
         project.technologies = techLine
           .replace(/technologies:|tech stack:/i, '')
@@ -976,8 +1011,10 @@ export class WorkdayFormFiller {
     try {
       // Workday uses specific data-automation-id attributes
       const fieldMappings = {
-        'input[data-automation-id="firstName"]': resumeData.personalInfo?.fullName?.split(' ')[0] || '',
-        'input[data-automation-id="lastName"]': resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
+        'input[data-automation-id="firstName"]':
+          resumeData.personalInfo?.fullName?.split(' ')[0] || '',
+        'input[data-automation-id="lastName"]':
+          resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
         'input[data-automation-id="email"]': resumeData.personalInfo?.email || '',
         'input[data-automation-id="phone"]': resumeData.personalInfo?.phone || '',
         'textarea[data-automation-id="coverLetter"]': this.generateCoverLetter(resumeData),
@@ -1003,8 +1040,9 @@ export class WorkdayFormFiller {
 
   private generateCoverLetter(resumeData: any): string {
     const name = resumeData.personalInfo?.fullName || 'Applicant';
-    const summary = resumeData.summary || 'I am a dedicated professional seeking new opportunities.';
-    
+    const summary =
+      resumeData.summary || 'I am a dedicated professional seeking new opportunities.';
+
     return `Dear Hiring Manager,
 
 ${summary}
@@ -1025,8 +1063,10 @@ export class GreenhouseFormFiller {
 
     try {
       const fieldMappings = {
-        'input[name="job_application[first_name]"]': resumeData.personalInfo?.fullName?.split(' ')[0] || '',
-        'input[name="job_application[last_name]"]': resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
+        'input[name="job_application[first_name]"]':
+          resumeData.personalInfo?.fullName?.split(' ')[0] || '',
+        'input[name="job_application[last_name]"]':
+          resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
         'input[name="job_application[email]"]': resumeData.personalInfo?.email || '',
         'input[name="job_application[phone]"]': resumeData.personalInfo?.phone || '',
         'textarea[name="job_application[cover_letter]"]': this.generateCoverLetter(resumeData),
@@ -1052,8 +1092,13 @@ export class GreenhouseFormFiller {
 
   private generateCoverLetter(resumeData: any): string {
     const name = resumeData.personalInfo?.fullName || 'Applicant';
-    const skills = resumeData.skills?.map((s: any) => s.items).flat().slice(0, 5).join(', ') || 'various technical skills';
-    
+    const skills =
+      resumeData.skills
+        ?.map((s: any) => s.items)
+        .flat()
+        .slice(0, 5)
+        .join(', ') || 'various technical skills';
+
     return `Dear Hiring Team,
 
 I am excited to apply for this position. With my experience in ${skills}, I am confident I can contribute effectively to your organization.
