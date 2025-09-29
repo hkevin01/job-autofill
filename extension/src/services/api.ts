@@ -1,10 +1,97 @@
-// API service for backend communication
+// API service for backend communication with enhanced resume parsing
 
 interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
+}
+
+// Enhanced resume parsing interfaces
+interface ParsedResume {
+  personalInfo: {
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    linkedin?: string;
+    github?: string;
+    website?: string;
+  };
+  summary?: string;
+  experience: Array<{
+    company: string;
+    position: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+    achievements: string[];
+    technologies?: string[];
+  }>;
+  education: Array<{
+    institution: string;
+    degree: string;
+    field: string;
+    graduationDate: string;
+    gpa?: string;
+  }>;
+  skills: Array<{
+    category: string;
+    items: string[];
+  }>;
+  certifications?: Array<{
+    name: string;
+    issuer: string;
+    date: string;
+    expirationDate?: string;
+  }>;
+  projects?: Array<{
+    name: string;
+    description: string;
+    technologies: string[];
+    link?: string;
+  }>;
+  languages?: Array<{
+    language: string;
+    proficiency: string;
+  }>;
+}
+
+// ATS-specific form field mappings
+interface ATSFieldMapping {
+  workday: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    coverLetter: string;
+    resume: string;
+  };
+  greenhouse: {
+    fullName: string;
+    email: string;
+    phone: string;
+    resume: string;
+    coverLetter: string;
+  };
+  lever: {
+    name: string;
+    email: string;
+    phone: string;
+    resume: string;
+  };
+  taleo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+  };
 }
 
 interface UserProfile {
@@ -281,6 +368,99 @@ class ApiService {
   async useTemplate(id: string): Promise<ApiResponse<any>> {
     return this.request(`/templates/${id}/use`, {
       method: 'POST',
+    });
+  }
+
+  // Enhanced Resume Parsing Methods
+  async parseResumeFromPDF(file: File): Promise<ApiResponse<ParsedResume>> {
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    try {
+      const url = `${this.baseUrl}/ai/parse-resume`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': this.authToken ? `Bearer ${this.authToken}` : '',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      console.error('Resume parsing failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Resume parsing failed' 
+      };
+    }
+  }
+
+  async parseResumeFromText(text: string): Promise<ApiResponse<ParsedResume>> {
+    return this.request<ParsedResume>('/ai/parse-resume-text', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  async generateApplicationResponses(
+    jobDescription: string,
+    resumeData: ParsedResume,
+    formFields: string[]
+  ): Promise<ApiResponse<Record<string, string>>> {
+    return this.request<Record<string, string>>('/ai/generate-responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        jobDescription,
+        resumeData,
+        formFields
+      }),
+    });
+  }
+
+  async generateCoverLetter(
+    jobDescription: string,
+    companyName: string,
+    position: string,
+    resumeData: ParsedResume
+  ): Promise<ApiResponse<{ coverLetter: string }>> {
+    return this.request<{ coverLetter: string }>('/ai/generate-cover-letter', {
+      method: 'POST',
+      body: JSON.stringify({
+        jobDescription,
+        companyName,
+        position,
+        resumeData
+      }),
+    });
+  }
+
+  async getATSFieldMappings(platform: string, url: string): Promise<ApiResponse<ATSFieldMapping>> {
+    return this.request<ATSFieldMapping>('/ats/field-mappings', {
+      method: 'POST',
+      body: JSON.stringify({ platform, url }),
+    });
+  }
+
+  async detectATSPlatform(url: string): Promise<ApiResponse<{ platform: string; confidence: number }>> {
+    return this.request<{ platform: string; confidence: number }>('/ats/detect-platform', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  async optimizeForATS(
+    resumeText: string,
+    jobDescription: string
+  ): Promise<ApiResponse<{ suggestions: string[]; score: number }>> {
+    return this.request<{ suggestions: string[]; score: number }>('/ai/optimize-ats', {
+      method: 'POST',
+      body: JSON.stringify({ resumeText, jobDescription }),
     });
   }
 

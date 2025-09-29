@@ -566,3 +566,506 @@ if (typeof window !== 'undefined') {
     sanitizeText,
   };
 }
+
+// =====================================================
+// Resume Parsing for Local Processing
+// =====================================================
+
+/**
+ * Local resume parsing using basic NLP patterns
+ * Fallback when API is unavailable or for privacy
+ */
+export class LocalResumeParser {
+  /**
+   * Parse resume from text content
+   */
+  async parseResumeFromText(text: string): Promise<any> {
+    console.log('🔍 Parsing resume from text locally');
+
+    try {
+      const sections = this.extractSections(text);
+      return {
+        personalInfo: this.extractPersonalInfo(text),
+        summary: this.extractSummary(sections),
+        experience: this.extractExperience(sections),
+        education: this.extractEducation(sections),
+        skills: this.extractSkills(sections),
+        certifications: this.extractCertifications(sections),
+        projects: this.extractProjects(sections)
+      };
+    } catch (error) {
+      console.error('Local resume parsing failed:', error);
+      throw error;
+    }
+  }
+
+  private extractSections(text: string): Record<string, string> {
+    const sections: Record<string, string> = {};
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+    // Common section headers (case-insensitive)
+    const sectionPatterns = {
+      experience: /^(experience|work\s*experience|professional\s*experience|employment\s*history|career\s*history)$/i,
+      education: /^(education|academic\s*background|qualifications)$/i,
+      skills: /^(skills|technical\s*skills|core\s*competencies|abilities|proficiencies)$/i,
+      summary: /^(summary|professional\s*summary|objective|career\s*objective|profile)$/i,
+      projects: /^(projects|personal\s*projects|portfolio|achievements)$/i,
+      certifications: /^(certifications|certificates|licenses|credentials)$/i
+    };
+
+    let currentSection = '';
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      let foundSection = false;
+
+      // Check if line matches any section header
+      for (const [section, pattern] of Object.entries(sectionPatterns)) {
+        if (pattern.test(line)) {
+          // Save previous section
+          if (currentSection && currentContent.length > 0) {
+            sections[currentSection] = currentContent.join('\n');
+          }
+          
+          currentSection = section;
+          currentContent = [];
+          foundSection = true;
+          break;
+        }
+      }
+
+      if (!foundSection && currentSection) {
+        currentContent.push(line);
+      }
+    }
+
+    // Save last section
+    if (currentSection && currentContent.length > 0) {
+      sections[currentSection] = currentContent.join('\n');
+    }
+
+    return sections;
+  }
+
+  private extractPersonalInfo(text: string): any {
+    const personalInfo: any = {};
+
+    // Extract email
+    const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
+    if (emailMatch) {
+      personalInfo.email = emailMatch[0];
+    }
+
+    // Extract phone (various formats)
+    const phoneMatch = text.match(/(\+?1?[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
+    if (phoneMatch) {
+      personalInfo.phone = phoneMatch[0];
+    }
+
+    // Extract LinkedIn
+    const linkedinMatch = text.match(/linkedin\.com\/in\/[a-zA-Z0-9-]+/i);
+    if (linkedinMatch) {
+      personalInfo.linkedin = 'https://' + linkedinMatch[0];
+    }
+
+    // Extract GitHub
+    const githubMatch = text.match(/github\.com\/[a-zA-Z0-9-]+/i);
+    if (githubMatch) {
+      personalInfo.github = 'https://' + githubMatch[0];
+    }
+
+    // Extract name (first meaningful line)
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    for (const line of lines) {
+      if (line.length > 2 && line.length < 50 && 
+          !line.includes('@') && 
+          !line.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/) &&
+          !line.toLowerCase().includes('linkedin') &&
+          !line.toLowerCase().includes('github') &&
+          !line.toLowerCase().includes('resume')) {
+        personalInfo.fullName = line;
+        break;
+      }
+    }
+
+    return personalInfo;
+  }
+
+  private extractSummary(sections: Record<string, string>): string {
+    return sections.summary || '';
+  }
+
+  private extractExperience(sections: Record<string, string>): any[] {
+    if (!sections.experience) return [];
+
+    const experienceText = sections.experience;
+    const experiences: any[] = [];
+
+    // Split by company/position blocks (lines starting with capital letters)
+    const blocks = experienceText.split(/\n(?=[A-Z][a-zA-Z\s&,.-]+(?:\s+\|\s+|\s+at\s+|\s+-\s+|\n))/);
+
+    for (const block of blocks) {
+      if (block.trim().length < 10) continue;
+
+      const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+      if (lines.length < 2) continue;
+
+      const experience: any = {
+        company: '',
+        position: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+        achievements: [],
+        technologies: []
+      };
+
+      // Extract dates first
+      const datePattern = /(\d{4}|\d{1,2}\/\d{4}|\w+\s+\d{4})/g;
+      const dates = block.match(datePattern) || [];
+
+      if (dates.length >= 2) {
+        experience.startDate = dates[0];
+        experience.endDate = dates[1];
+      } else if (dates.length === 1) {
+        experience.startDate = dates[0];
+        experience.endDate = 'Present';
+      }
+
+      // Parse first two lines for company/position
+      const firstLine = lines[0];
+      const secondLine = lines[1] || '';
+
+      if (firstLine.toLowerCase().includes(' at ') || firstLine.includes(' | ')) {
+        const parts = firstLine.split(/\s+at\s+|\s+\|\s+/);
+        experience.position = parts[0].trim();
+        experience.company = parts[1]?.trim() || '';
+      } else {
+        experience.position = firstLine;
+        if (secondLine && !datePattern.test(secondLine)) {
+          experience.company = secondLine;
+        }
+      }
+
+      // Extract description and achievements
+      const descriptionLines = lines.slice(2).filter(line => 
+        !datePattern.test(line) && line.length > 10
+      );
+      
+      experience.description = descriptionLines.join(' ');
+      experience.achievements = descriptionLines.filter(line => 
+        line.startsWith('•') || line.startsWith('-') || line.startsWith('*')
+      ).map(line => line.replace(/^[•\-*]\s*/, ''));
+
+      experiences.push(experience);
+    }
+
+    return experiences;
+  }
+
+  private extractEducation(sections: Record<string, string>): any[] {
+    if (!sections.education) return [];
+
+    const educationText = sections.education;
+    const education: any[] = [];
+
+    const lines = educationText.split('\n').map(line => line.trim()).filter(line => line);
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Look for degree patterns
+      const degreePatterns = [
+        /\b(bachelor|master|phd|doctorate|associate|diploma|certificate)\b/i,
+        /\b(b\.?s\.?|m\.?s\.?|b\.?a\.?|m\.?a\.?|ph\.?d\.?)\b/i
+      ];
+
+      if (degreePatterns.some(pattern => pattern.test(line))) {
+        const edu: any = {
+          institution: '',
+          degree: line,
+          field: '',
+          graduationDate: ''
+        };
+
+        // Look for institution in surrounding lines
+        if (i + 1 < lines.length && !degreePatterns.some(p => p.test(lines[i + 1]))) {
+          edu.institution = lines[i + 1];
+        } else if (i > 0 && !degreePatterns.some(p => p.test(lines[i - 1]))) {
+          edu.institution = lines[i - 1];
+        }
+
+        // Extract graduation date
+        const dateMatch = line.match(/\d{4}/);
+        if (dateMatch) {
+          edu.graduationDate = dateMatch[0];
+        }
+
+        // Extract field from degree
+        const fieldMatch = line.match(/in\s+([a-zA-Z\s]+)/i);
+        if (fieldMatch) {
+          edu.field = fieldMatch[1].trim();
+        }
+
+        education.push(edu);
+      }
+    }
+
+    return education;
+  }
+
+  private extractSkills(sections: Record<string, string>): any[] {
+    if (!sections.skills) return [];
+
+    const skillsText = sections.skills;
+    const skills: any[] = [];
+
+    // Split by categories (lines ending with colon)
+    const categories = skillsText.split(/\n(?=[A-Z][a-zA-Z\s]+:)/);
+
+    for (const category of categories) {
+      const lines = category.split('\n').map(line => line.trim()).filter(line => line);
+      if (lines.length === 0) continue;
+
+      const firstLine = lines[0];
+      const categoryName = firstLine.includes(':') ? firstLine.replace(':', '').trim() : 'Technical Skills';
+      
+      const skillItems = lines.slice(firstLine.includes(':') ? 1 : 0)
+        .join(' ')
+        .split(/[,;•\-]/)
+        .map(skill => skill.trim())
+        .filter(skill => skill && skill.length > 1);
+
+      if (skillItems.length > 0) {
+        skills.push({
+          category: categoryName,
+          items: skillItems
+        });
+      }
+    }
+
+    // If no categories found, treat as single list
+    if (skills.length === 0) {
+      const allSkills = skillsText
+        .split(/[,;•\-\n]/)
+        .map(skill => skill.trim())
+        .filter(skill => skill && skill.length > 1);
+
+      if (allSkills.length > 0) {
+        skills.push({
+          category: 'Technical Skills',
+          items: allSkills
+        });
+      }
+    }
+
+    return skills;
+  }
+
+  private extractCertifications(sections: Record<string, string>): any[] {
+    if (!sections.certifications) return [];
+
+    const certText = sections.certifications;
+    const certifications: any[] = [];
+
+    const lines = certText.split('\n').map(line => line.trim()).filter(line => line);
+
+    for (const line of lines) {
+      if (line.length < 5) continue;
+
+      const cert: any = {
+        name: line,
+        issuer: '',
+        date: ''
+      };
+
+      // Extract date
+      const dateMatch = line.match(/\d{4}/);
+      if (dateMatch) {
+        cert.date = dateMatch[0];
+      }
+
+      // Extract issuer (common patterns)
+      const issuerPatterns = [
+        /by\s+([A-Za-z\s&,.]+)/i,
+        /from\s+([A-Za-z\s&,.]+)/i,
+        /-\s+([A-Za-z\s&,.]+)/
+      ];
+
+      for (const pattern of issuerPatterns) {
+        const match = line.match(pattern);
+        if (match) {
+          cert.issuer = match[1].trim();
+          cert.name = line.replace(match[0], '').trim();
+          break;
+        }
+      }
+
+      certifications.push(cert);
+    }
+
+    return certifications;
+  }
+
+  private extractProjects(sections: Record<string, string>): any[] {
+    if (!sections.projects) return [];
+
+    const projectsText = sections.projects;
+    const projects: any[] = [];
+
+    // Split by project names (lines with colons or dashes)
+    const blocks = projectsText.split(/\n(?=[A-Z][a-zA-Z\s-]+:|\n\s*-\s*[A-Z])/);
+
+    for (const block of blocks) {
+      const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+      if (lines.length < 2) continue;
+
+      const project: any = {
+        name: lines[0].replace(/^-\s*|:$/, '').trim(),
+        description: '',
+        technologies: [],
+        link: ''
+      };
+
+      // Extract description
+      const descLines = lines.slice(1).filter(line => 
+        !line.toLowerCase().includes('technologies:') &&
+        !line.toLowerCase().includes('tech stack:') &&
+        !line.includes('http')
+      );
+      project.description = descLines.join(' ');
+
+      // Extract technologies
+      const techLine = lines.find(line => 
+        line.toLowerCase().includes('technologies:') ||
+        line.toLowerCase().includes('tech stack:')
+      );
+      
+      if (techLine) {
+        project.technologies = techLine
+          .replace(/technologies:|tech stack:/i, '')
+          .split(/[,;]/)
+          .map(tech => tech.trim())
+          .filter(tech => tech);
+      }
+
+      // Extract link
+      const linkMatch = block.match(/(https?:\/\/[^\s]+)/);
+      if (linkMatch) {
+        project.link = linkMatch[0];
+      }
+
+      projects.push(project);
+    }
+
+    return projects;
+  }
+}
+
+// =====================================================
+// ATS-Specific Form Fillers
+// =====================================================
+
+/**
+ * Workday-specific form filling logic
+ */
+export class WorkdayFormFiller {
+  fillApplication(resumeData: any): boolean {
+    console.log('🏢 Filling Workday application form');
+
+    try {
+      // Workday uses specific data-automation-id attributes
+      const fieldMappings = {
+        'input[data-automation-id="firstName"]': resumeData.personalInfo?.fullName?.split(' ')[0] || '',
+        'input[data-automation-id="lastName"]': resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
+        'input[data-automation-id="email"]': resumeData.personalInfo?.email || '',
+        'input[data-automation-id="phone"]': resumeData.personalInfo?.phone || '',
+        'textarea[data-automation-id="coverLetter"]': this.generateCoverLetter(resumeData),
+      };
+
+      let filledCount = 0;
+      for (const [selector, value] of Object.entries(fieldMappings)) {
+        const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+        if (element && value) {
+          if (setInputValue(element, value)) {
+            filledCount++;
+          }
+        }
+      }
+
+      console.log(`✅ Filled ${filledCount} Workday fields`);
+      return filledCount > 0;
+    } catch (error) {
+      console.error('Workday form filling failed:', error);
+      return false;
+    }
+  }
+
+  private generateCoverLetter(resumeData: any): string {
+    const name = resumeData.personalInfo?.fullName || 'Applicant';
+    const summary = resumeData.summary || 'I am a dedicated professional seeking new opportunities.';
+    
+    return `Dear Hiring Manager,
+
+${summary}
+
+Based on my experience and skills, I believe I would be a valuable addition to your team. I look forward to discussing how my background aligns with your needs.
+
+Best regards,
+${name}`;
+  }
+}
+
+/**
+ * Greenhouse-specific form filling logic
+ */
+export class GreenhouseFormFiller {
+  fillApplication(resumeData: any): boolean {
+    console.log('🌱 Filling Greenhouse application form');
+
+    try {
+      const fieldMappings = {
+        'input[name="job_application[first_name]"]': resumeData.personalInfo?.fullName?.split(' ')[0] || '',
+        'input[name="job_application[last_name]"]': resumeData.personalInfo?.fullName?.split(' ').slice(1).join(' ') || '',
+        'input[name="job_application[email]"]': resumeData.personalInfo?.email || '',
+        'input[name="job_application[phone]"]': resumeData.personalInfo?.phone || '',
+        'textarea[name="job_application[cover_letter]"]': this.generateCoverLetter(resumeData),
+      };
+
+      let filledCount = 0;
+      for (const [selector, value] of Object.entries(fieldMappings)) {
+        const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+        if (element && value) {
+          if (setInputValue(element, value)) {
+            filledCount++;
+          }
+        }
+      }
+
+      console.log(`✅ Filled ${filledCount} Greenhouse fields`);
+      return filledCount > 0;
+    } catch (error) {
+      console.error('Greenhouse form filling failed:', error);
+      return false;
+    }
+  }
+
+  private generateCoverLetter(resumeData: any): string {
+    const name = resumeData.personalInfo?.fullName || 'Applicant';
+    const skills = resumeData.skills?.map((s: any) => s.items).flat().slice(0, 5).join(', ') || 'various technical skills';
+    
+    return `Dear Hiring Team,
+
+I am excited to apply for this position. With my experience in ${skills}, I am confident I can contribute effectively to your organization.
+
+Thank you for your consideration.
+
+Sincerely,
+${name}`;
+  }
+}
+
+// Export the new classes
+export const localResumeParser = new LocalResumeParser();
+export const workdayFormFiller = new WorkdayFormFiller();
+export const greenhouseFormFiller = new GreenhouseFormFiller();
